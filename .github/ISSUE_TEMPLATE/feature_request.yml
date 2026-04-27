@@ -1,0 +1,18 @@
+name: Solicitud de Funcionalidad
+description: Sugiere una idea para este proyecto
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: ¿Cuál es tu sugerencia?
+      description: Describe la funcionalidad que te gustaría ver.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: ¿Por qué es necesaria?
+      description: Explica el valor que aporta esta funcionalidad.
+    validations:
+      required: true

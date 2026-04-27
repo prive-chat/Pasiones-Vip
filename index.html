@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Pasiones Vip | Gestión de Medios y Mensajería Segura</title>
+    <meta name="description" content="Plataforma modular y escalable de grado empresarial para la gestión de medios y mensajería segura." />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://ais-pre-d6m2tqmyydzel37l6tigkn-328810327831.us-east1.run.app" />
+    <meta property="og:title" content="Pasiones Vip | Gestión de Medios y Mensajería Segura" />
+    <meta property="og:description" content="Plataforma modular y escalable de grado empresarial para la gestión de medios y mensajería segura." />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://ais-pre-d6m2tqmyydzel37l6tigkn-328810327831.us-east1.run.app" />
+    <meta property="twitter:title" content="Pasiones Vip | Gestión de Medios y Mensajería Segura" />
+    <meta property="twitter:description" content="Plataforma modular y escalable de grado empresarial para la gestión de medios y mensajería segura." />
+
+    <!-- PWA Settings & Branding -->
+    <meta name="theme-color" content="#050505" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Pasiones Vip" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Pasiones Vip" />
+    <meta name="msapplication-TileColor" content="#050505" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <link rel="mask-icon" href="/favicon-32.png" color="#C62828" />
+    
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then(registration => {
+            console.log('SW registered: ', registration);
+          }).catch(registrationError => {
+            console.log('SW registration failed: ', registrationError);
+          });
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
