@@ -10,8 +10,18 @@ if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder')) {
   console.error('CRITICAL: Supabase credentials missing or invalid. Current URL:', supabaseUrl);
 }
 
+// Safe function to get hostname for storage key
+const getSafeHostname = (url: string) => {
+  try {
+    if (!url || !url.startsWith('http')) return 'pasiones';
+    return new URL(url).hostname.split('.')[0];
+  } catch (e) {
+    return 'pasiones';
+  }
+};
+
 // Set a clean storage key
-const storageKey = `sb-${supabaseUrl ? new URL(supabaseUrl).hostname.split('.')[0] : 'prive'}-auth-token`;
+const storageKey = `sb-${getSafeHostname(supabaseUrl)}-auth-token`;
 
 export const supabase = createClient(
   supabaseUrl || 'https://vqbupjnuveflshlhsmjz.supabase.co',

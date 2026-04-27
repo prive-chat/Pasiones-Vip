@@ -28,7 +28,7 @@ async function startServer() {
 
   // Supabase Client for backend operations
   const rawUrl = process.env.VITE_SUPABASE_URL || "";
-  const supabaseUrl = rawUrl.replace(/\/+$/, '').replace(/\/rest\/v1$/, '');
+  const supabaseUrl = rawUrl.replace(/\/+$/, '').replace(/\/rest\/v1$/, '') || "https://vqbupjnuveflshlhsmjz.supabase.co";
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
   
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
