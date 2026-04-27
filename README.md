@@ -80,5 +80,23 @@ El contenido de `/dist` es estático y de alto rendimiento.
 Este proyecto está bajo la Licencia **MIT**. Consulta el archivo `LICENSE` para más detalles.
 
 ---
-🛡️ *Seguridad. Elegancia. Exclusividad.*  
-**Pasiones Vip - El Enclave de la Comunicación Privada.**
+## 🚀 Despliegue en Producción (Vercel + Supabase)
+
+### 1. Variables de Entorno
+Configura las siguientes variables en el panel de Vercel:
+- `VITE_SUPABASE_URL`: Tu URL del proyecto Supabase.
+- `VITE_SUPABASE_ANON_KEY`: Tu llave anónima de Supabase.
+- `SUPABASE_SERVICE_ROLE_KEY`: Tu llave de servicio (necesaria para el backend).
+- `VITE_VAPID_PUBLIC_KEY`: Generada anteriormente.
+- `VAPID_PRIVATE_KEY`: Generada anteriormente.
+- `VAPID_SUBJECT`: `mailto:tu@email.com`
+
+### 2. Base de Datos
+1. Ejecuta `supabase_schema.sql` en Supabase.
+2. Configura los Webhooks usando `supabase_webhook_config.sql`.
+
+### 3. Build & Development Settings
+- **Framework Preset:** Vite
+- **Build Command:** `npm run build`
+- **Output Directory:** `dist`
+- **Install Command:** `npm install`
