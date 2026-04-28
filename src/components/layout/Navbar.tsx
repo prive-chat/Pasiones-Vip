@@ -67,7 +67,7 @@ export default function Navbar() {
       <div className="container mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
         <Link to="/" onClick={handleHomeClick} className="flex items-center space-x-2 group shrink-0">
           <Logo size={40} glow={false} />
-          <span className="text-lg sm:text-xl font-black tracking-tighter passion-text drop-shadow-sm truncate max-w-[120px] sm:max-w-none font-display italic transition-all group-hover:drop-shadow-[0_0_8px_rgba(230,0,0,0.5)]">PRIVÉ CHAT</span>
+          <span className="text-lg sm:text-xl font-black tracking-tighter passion-text drop-shadow-sm truncate max-w-[120px] sm:max-w-none font-display italic transition-all group-hover:drop-shadow-[0_0_8px_rgba(230,0,0,0.5)]">PASIONES VIP</span>
         </Link>
 
         <div className="flex items-center space-x-2 relative" ref={menuRef}>

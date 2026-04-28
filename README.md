@@ -2,7 +2,7 @@
 
 ![Pasiones Vip Refined](https://ais-pre-d6m2tqmyydzel37l6tigkn-328810327831.us-east1.run.app/favicon-32.png) 
 
-**Pasiones Vip** es una plataforma de mensajería de grado empresarial orientada a la exclusividad, la privacidad total y una experiencia de usuario inmersiva bajo el concepto de **"Enclave Privé"**. Diseñado para usuarios que exigen hermetismo, elegancia y un rendimiento impecable.
+**Pasiones Vip** es una plataforma de mensajería de grado empresarial orientada a la exclusividad, la privacidad total y una experiencia de usuario inmersiva bajo el concepto de **"Enclave VIP"**. Diseñado para usuarios que exigen hermetismo, elegancia y un rendimiento impecable.
 
 ## 🔗 Enlaces Rápidos
 - 📱 [Demo en Vivo](https://ais-pre-d6m2tqmyydzel37l6tigkn-328810327831.us-east1.run.app)

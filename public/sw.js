@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prive-chat-v2';
+const CACHE_NAME = 'pasiones-vip-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

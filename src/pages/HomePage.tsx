@@ -130,7 +130,7 @@ export default function HomePage() {
 
               {/* Community Info */}
               <div className="p-6 rounded-3xl bg-gradient-to-br from-primary-600/20 to-transparent border border-white/10">
-                <h4 className="text-sm font-black text-white uppercase italic mb-2">Comunidad Privé</h4>
+                <h4 className="text-sm font-black text-white uppercase italic mb-2">Comunidad VIP</h4>
                 <p className="text-xs text-white/60 leading-relaxed">
                   Únete a la red más exclusiva. Conecta con perfiles verificados y vive la pasión sin límites.
                 </p>

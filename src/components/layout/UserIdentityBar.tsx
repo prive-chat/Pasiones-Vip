@@ -64,7 +64,7 @@ export default function UserIdentityBar() {
             className="flex flex-col min-w-0"
           >
             <h2 className="text-xl font-black text-white truncate uppercase italic tracking-tight group-hover:text-passion-red transition-colors">
-              {profile.full_name || 'Usuario Privé'}
+              {profile.full_name || 'Usuario VIP'}
             </h2>
             <span className="text-xs font-bold text-white/40 lowercase tracking-wide truncate">
               @{profile.username || 'usuario'}

@@ -8,7 +8,7 @@ interface LogoProps {
 }
 
 /**
- * Pasiones Vip - "Enclave Privé" Logo
+ * Pasiones Vip - "Enclave VIP" Logo
  * Symbolizes secure communication through interlocking chat bubbles 
  * that form a lock in negative space.
  */
@@ -99,7 +99,7 @@ export const Logo: React.FC<LogoProps> = ({ className = "", size = 64, glow = tr
           />
         </g>
 
-        {/* Monogram with Specular Shine */}
+        {/* Monogram with Specular Shine (PV) */}
         <g filter="url(#internal_glow)">
           {/* P Crystal */}
           <path
@@ -117,16 +117,6 @@ export const Logo: React.FC<LogoProps> = ({ className = "", size = 64, glow = tr
             strokeWidth="32"
             strokeLinecap="round"
             strokeLinejoin="round"
-          />
-          
-          {/* Specular Overlays for Monogram - Subtle Gleam */}
-          <path
-            d="M195 190V230"
-            stroke="white"
-            strokeOpacity="0.4"
-            strokeWidth="4"
-            strokeLinecap="round"
-            className="mix-blend-overlay"
           />
         </g>
 
