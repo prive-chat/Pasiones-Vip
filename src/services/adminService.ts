@@ -14,24 +14,47 @@ export interface AuditLog {
   profiles?: UserProfile;
 }
 
+export interface UserReport {
+  id: string;
+  reporter_id: string;
+  reported_user_id: string;
+  reported_content_id?: string;
+  content_type: 'profile' | 'media' | 'message';
+  reason: string;
+  status: 'pending' | 'investigating' | 'resolved' | 'dismissed';
+  admin_notes?: string;
+  created_at: string;
+  reporter?: UserProfile;
+  reported_user?: UserProfile;
+}
+
+export interface GlobalConfig {
+  key: string;
+  value: any;
+  description?: string;
+  updated_at: string;
+}
+
 export interface SystemStats {
   totalUsers: number;
   totalMedia: number;
   totalMessages: number;
   verifiedUsers: number;
+  pendingReports: number;
   growthData: { date: string; users: number; media: number }[];
 }
 
 export const adminService = {
   async fetchStats(): Promise<SystemStats> {
-    const [usersCount, mediaCount, messagesCount, verifiedCount] = await Promise.all([
+    const [usersCount, mediaCount, messagesCount, verifiedCount, reportsCount] = await Promise.all([
       supabase.from('profiles').select('*', { count: 'exact', head: true }),
       supabase.from('media').select('*', { count: 'exact', head: true }),
       supabase.from('messages').select('*', { count: 'exact', head: true }),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('is_verified', true)
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('is_verified', true),
+      supabase.from('user_reports').select('*', { count: 'exact', head: true }).eq('status', 'pending')
     ]);
 
-    // Mock growth data for the last 7 days (in a real app, this would be a complex query or a dedicated stats table)
+    // Mock growth data for the last 7 days
     const growthData = Array.from({ length: 7 }).map((_, i) => {
       const date = new Date();
       date.setDate(date.getDate() - (6 - i));
@@ -47,6 +70,7 @@ export const adminService = {
       totalMedia: mediaCount.count || 0,
       totalMessages: messagesCount.count || 0,
       verifiedUsers: verifiedCount.count || 0,
+      pendingReports: reportsCount.count || 0,
       growthData
     };
   },
@@ -54,12 +78,57 @@ export const adminService = {
   async fetchAuditLogs(limit = 50): Promise<AuditLog[]> {
     const { data, error } = await supabase
       .from('audit_logs')
-      .select('*, profiles(*)')
+      .select('*, profiles:user_id(*)')
       .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) throw error;
     return data || [];
+  },
+
+  // Reports Management
+  async fetchReports(): Promise<UserReport[]> {
+    const { data, error } = await supabase
+      .from('user_reports')
+      .select('*, reporter:reporter_id(*), reported_user:reported_user_id(*)')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async updateReport(id: string, updates: Partial<UserReport>) {
+    const { data, error } = await supabase
+      .from('user_reports')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Global Config Management
+  async fetchGlobalConfig(): Promise<GlobalConfig[]> {
+    const { data, error } = await supabase
+      .from('global_config')
+      .select('*')
+      .order('key', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async updateGlobalConfig(key: string, value: any) {
+    const { data, error } = await supabase
+      .from('global_config')
+      .upsert({ key, value, updated_at: new Date().toISOString() })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   },
 
   async broadcastMessage(title: string, content: string, senderId: string) {

@@ -27,16 +27,21 @@ import { AdminModeration } from '../components/admin/AdminModeration';
 import { AdminSecurity } from '../components/admin/AdminSecurity';
 import { AdminBroadcast } from '../components/admin/AdminBroadcast';
 import { AdminAds } from '../components/admin/AdminAds';
+import AdminAuditLogs from '../components/admin/AdminAuditLogs';
+import AdminReports from '../components/admin/AdminReports';
+import AdminGlobalConfig from '../components/admin/AdminGlobalConfig';
 
-type AdminTab = 'dashboard' | 'users' | 'moderation' | 'ads' | 'security' | 'broadcast';
+type AdminTab = 'dashboard' | 'users' | 'moderation' | 'reports' | 'ads' | 'broadcast' | 'audit' | 'config';
 
 const tabs: { id: AdminTab; label: string; icon: any }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'users', label: 'Usuarios', icon: Users },
   { id: 'moderation', label: 'Moderación', icon: ImageIcon },
+  { id: 'reports', label: 'Reportes', icon: AlertTriangle },
   { id: 'ads', label: 'Publicidad', icon: Megaphone },
-  { id: 'security', label: 'Seguridad', icon: Lock },
   { id: 'broadcast', label: 'Broadcast', icon: Send },
+  { id: 'audit', label: 'Logs', icon: Lock },
+  { id: 'config', label: 'Config', icon: Shield },
 ];
 
 export default function AdminPage() {
@@ -247,12 +252,20 @@ export default function AdminPage() {
               />
             )}
 
+            {activeTab === 'reports' && (
+              <AdminReports />
+            )}
+
             {activeTab === 'ads' && (
               <AdminAds ads={ads} onDeleteAd={handleDeleteAd} onRefresh={fetchData} />
             )}
 
-            {activeTab === 'security' && (
-              <AdminSecurity auditLogs={auditLogs} onRefresh={fetchData} />
+            {activeTab === 'audit' && (
+              <AdminAuditLogs />
+            )}
+
+            {activeTab === 'config' && (
+              <AdminGlobalConfig />
             )}
 
             {activeTab === 'broadcast' && (

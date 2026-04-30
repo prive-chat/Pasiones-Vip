@@ -164,6 +164,27 @@ CREATE TABLE IF NOT EXISTS public.ad_likes (
   UNIQUE(user_id, ad_id)
 );
 
+-- L. REPORTES DE USUARIO
+CREATE TABLE IF NOT EXISTS public.user_reports (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  reporter_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  reported_user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  reported_content_id UUID,
+  content_type TEXT CHECK (content_type IN ('profile', 'media', 'message')),
+  reason TEXT NOT NULL,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'investigating', 'resolved', 'dismissed')),
+  admin_notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- M. CONFIGURACIÓN GLOBAL
+CREATE TABLE IF NOT EXISTS public.global_config (
+  key TEXT PRIMARY KEY,
+  value JSONB NOT NULL,
+  description TEXT,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
 -- ===============================================================
 -- 4. SEGURIDAD RLS Y AYUDANTES
 -- ===============================================================
@@ -179,6 +200,8 @@ ALTER TABLE public.user_chats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ad_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.global_config ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION public.is_super_admin()
 RETURNS BOOLEAN AS $$
@@ -287,6 +310,20 @@ CREATE POLICY "Reacciones anuncios visibles por todos" ON public.ad_likes FOR SE
 
 DROP POLICY IF EXISTS "Usuarios reaccionan a anuncios" ON public.ad_likes;
 CREATE POLICY "Usuarios reaccionan a anuncios" ON public.ad_likes FOR ALL USING (auth.uid() = user_id);
+
+-- USER REPORTS
+DROP POLICY IF EXISTS "Usuarios crean reportes" ON public.user_reports;
+CREATE POLICY "Usuarios crean reportes" ON public.user_reports FOR INSERT WITH CHECK (auth.uid() = reporter_id);
+
+DROP POLICY IF EXISTS "Admins gestionan reportes" ON public.user_reports;
+CREATE POLICY "Admins gestionan reportes" ON public.user_reports FOR ALL USING (public.is_super_admin());
+
+-- GLOBAL CONFIG
+DROP POLICY IF EXISTS "Cualquiera ve config publica" ON public.global_config;
+CREATE POLICY "Cualquiera ve config publica" ON public.global_config FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Admins gestionan config global" ON public.global_config;
+CREATE POLICY "Admins gestionan config global" ON public.global_config FOR ALL USING (public.is_super_admin());
 
 -- ===============================================================
 -- 6. POLÍTICAS DE STORAGE
