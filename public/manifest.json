@@ -1,18 +1,16 @@
 {
+  "id": "/?source=pwa",
   "name": "Pasiones Vip | Enclave Digital de Élite",
   "short_name": "Pasiones Vip",
   "description": "Mensajería segura de grado empresarial con privacidad absoluta y diseño exclusivo.",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#050505",
   "theme_color": "#050505",
   "orientation": "portrait",
+  "categories": ["social", "communication", "security"],
   "icons": [
-    {
-      "src": "/favicon-32.png",
-      "sizes": "32x32",
-      "type": "image/png"
-    },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
@@ -30,6 +28,13 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mensajes",
+      "url": "/messages",
+      "icons": [{ "src": "/favicon-32.png", "sizes": "32x32" }]
     }
   ]
 }
