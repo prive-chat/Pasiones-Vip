@@ -1,6 +1,7 @@
 import { supabase } from '@/src/lib/supabase';
 import { MediaItem } from '@/src/types';
 import { notificationService } from './notificationService';
+import { optimizeImage } from '@/src/lib/imageOptimization';
 
 export const mediaService = {
   async fetchMedia(userId?: string, page = 0, limit = 10) {
@@ -257,12 +258,21 @@ export const mediaService = {
     caption: string | null,
     onProgress?: (progress: number) => void
   ) {
+    let fileToUpload: File | Blob = file;
+    if (type === 'image') {
+      try {
+        fileToUpload = await optimizeImage(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.8 });
+      } catch (err) {
+        console.error('Error optimizing media image, using original:', err);
+      }
+    }
+
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
     
     const { error: uploadError } = await supabase.storage
       .from('media')
-      .upload(fileName, file, {
+      .upload(fileName, fileToUpload, {
         onUploadProgress: (evt: any) => {
           if (onProgress) {
             const progress = Math.round((evt.loaded / evt.total) * 100);

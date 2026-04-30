@@ -1,6 +1,7 @@
 import { supabase } from '@/src/lib/supabase';
 import { Message, Conversation } from '@/src/types';
 import { notificationService } from './notificationService';
+import { optimizeImage } from '@/src/lib/imageOptimization';
 
 export const messageService = {
   async fetchMessages(currentUserId: string, targetUserId: string, page = 0, limit = 50) {
@@ -140,11 +141,21 @@ export const messageService = {
     if (file) {
       const fileExt = file.name.split('.').pop();
       mediaType = file.type.startsWith('video') ? 'video' : 'image';
+
+      let fileToUpload: File | Blob = file;
+      if (mediaType === 'image') {
+        try {
+          fileToUpload = await optimizeImage(file, { maxWidth: 1000, maxHeight: 1000, quality: 0.7 });
+        } catch (err) {
+          console.error('Error optimizing chat image:', err);
+        }
+      }
+
       const fileName = `${senderId}/chat/${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
         .from('media')
-        .upload(fileName, file);
+        .upload(fileName, fileToUpload);
 
       if (uploadError) throw uploadError;
 

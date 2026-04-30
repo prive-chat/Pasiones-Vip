@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { User, Camera, Check, AlertCircle, ShieldCheck, Mail, Calendar, Bell, BellOff, Trash2 } from 'lucide-react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { profileService } from '../services/profileService';
+import { optimizeImage } from '../lib/imageOptimization';
 
 export default function SettingsPage() {
   const { user, profile, refreshProfile, signOut } = useAuth();
@@ -91,13 +92,20 @@ export default function SettingsPage() {
     setMessage(null);
 
     try {
+      let fileToUpload: File | Blob = file;
+      try {
+        fileToUpload = await optimizeImage(file, { maxWidth: 400, maxHeight: 400, quality: 0.8 });
+      } catch (err) {
+        console.error('Error optimizing avatar:', err);
+      }
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Math.random()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('media')
-        .upload(filePath, file);
+        .upload(filePath, fileToUpload);
 
       if (uploadError) throw uploadError;
 
@@ -132,13 +140,20 @@ export default function SettingsPage() {
     setMessage(null);
 
     try {
+      let fileToUpload: File | Blob = file;
+      try {
+        fileToUpload = await optimizeImage(file, { maxWidth: 1200, maxHeight: 400, quality: 0.8 });
+      } catch (err) {
+        console.error('Error optimizing cover:', err);
+      }
+
       const fileExt = file.name.split('.').pop();
       const fileName = `cover-${user.id}-${Math.random()}.${fileExt}`;
       const filePath = `covers/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('media')
-        .upload(filePath, file);
+        .upload(filePath, fileToUpload);
 
       if (uploadError) throw uploadError;
 

@@ -6,7 +6,7 @@ import { Upload, X, AlertCircle, Loader2, Image as ImageIcon, Video as VideoIcon
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/src/hooks/useAuth';
 import { useNotificationStore } from '@/src/store/notificationStore';
-import imageCompression from 'browser-image-compression';
+import { useImageUpload } from '@/src/hooks/useImageUpload';
 import { cn } from '@/src/lib/utils';
 
 interface MediaUploadProps {
@@ -17,13 +17,18 @@ export default function MediaUpload({ onUploadComplete }: MediaUploadProps) {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const { addToast, updateToast } = useNotificationStore();
+  const { processImage, isOptimizing: isCompressing, error: optimizeError } = useImageUpload({
+    maxWidth: 1200,
+    maxHeight: 1200,
+    quality: 0.8,
+    maxMB: 20
+  });
   
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | Blob | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isCompressing, setIsCompressing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   
@@ -38,34 +43,21 @@ export default function MediaUpload({ onUploadComplete }: MediaUploadProps) {
       return;
     }
 
-    const maxSize = isVideo ? 100 * 1024 * 1024 : 20 * 1024 * 1024; // Increased limits slightly
-    if (selectedFile.size > maxSize) {
-      setError(`El archivo es demasiado grande. Máximo ${isVideo ? '100MB' : '20MB'}.`);
+    if (isVideo && selectedFile.size > 100 * 1024 * 1024) {
+      setError('El video es demasiado grande. Máximo 100MB.');
       return;
     }
 
-    let fileToUpload = selectedFile;
-
-    if (isImage) {
-      setIsCompressing(true);
-      try {
-        const options = {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1920,
-          useWebWorker: true,
-        };
-        fileToUpload = await imageCompression(selectedFile, options);
-      } catch (err) {
-        console.error('Compression error:', err);
-      } finally {
-        setIsCompressing(false);
-      }
-    }
-
-    setFile(fileToUpload);
     setError(null);
-    const url = URL.createObjectURL(fileToUpload);
-    setPreview(url);
+    const result = await processImage(selectedFile);
+    
+    if (result) {
+      setFile(result);
+      const url = URL.createObjectURL(result);
+      setPreview(url);
+    } else if (optimizeError) {
+      setError(optimizeError);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,7 +103,7 @@ export default function MediaUpload({ onUploadComplete }: MediaUploadProps) {
     try {
       await mediaService.uploadMedia(
         user.id,
-        file,
+        file as File, // Blob is accepted by storage.upload
         file.type.startsWith('video') ? 'video' : 'image',
         caption,
         (progress) => {

@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import Navbar from './components/layout/Navbar';
 import ModalCenter from './components/layout/ModalCenter';
@@ -7,7 +7,8 @@ import ScrollToTop from './components/layout/ScrollToTop';
 import { InstallPrompt } from './components/ui/InstallPrompt';
 import NotificationManager from './components/notifications/NotificationManager';
 import ToastContainer from './components/notifications/ToastContainer';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import PageTransition from './components/layout/PageTransition';
 
 // Import pages directly to prevent lazy loading context issues
 import AuthPage from './pages/AuthPage';
@@ -42,6 +43,7 @@ const LoadingScreen = ({ message = "Cargando..." }) => (
 
 export default function App() {
   const { user, profile, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return <LoadingScreen message="Cargando Pasiones Vip..." />;
@@ -58,23 +60,25 @@ export default function App() {
           <NotificationManager />
           <ModalCenter />
           <main>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/auth" element={!user ? <AuthPage /> : <Navigate to="/" replace />} />
-              <Route path="/profile/:userId" element={<UserProfilePage />} />
-              <Route path="/post/:postId" element={<PostPage />} />
-              
-              {/* Protected Routes */}
-              <Route path="/" element={user ? <HomePage /> : <Navigate to="/auth" replace />} />
-              <Route path="/messages" element={user ? <MessagesPage /> : <Navigate to="/auth" replace />} />
-              <Route path="/settings" element={user ? <SettingsPage /> : <Navigate to="/auth" replace />} />
-              
-              {profile?.role?.toLowerCase().trim() === 'super_admin' && (
-                <Route path="/admin" element={user ? <AdminPage /> : <Navigate to="/auth" replace />} />
-              )}
-              
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
+            <AnimatePresence mode="wait">
+              <Routes location={location} key={location.pathname}>
+                {/* Public Routes */}
+                <Route path="/auth" element={!user ? <AuthPage /> : <Navigate to="/" replace />} />
+                <Route path="/profile/:userId" element={<PageTransition><UserProfilePage /></PageTransition>} />
+                <Route path="/post/:postId" element={<PageTransition><PostPage /></PageTransition>} />
+                
+                {/* Protected Routes */}
+                <Route path="/" element={user ? <PageTransition><HomePage /></PageTransition> : <Navigate to="/auth" replace />} />
+                <Route path="/messages" element={user ? <PageTransition><MessagesPage /></PageTransition> : <Navigate to="/auth" replace />} />
+                <Route path="/settings" element={user ? <PageTransition><SettingsPage /></PageTransition> : <Navigate to="/auth" replace />} />
+                
+                {profile?.role?.toLowerCase().trim() === 'super_admin' && (
+                  <Route path="/admin" element={user ? <PageTransition><AdminPage /></PageTransition> : <Navigate to="/auth" replace />} />
+                )}
+                
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </AnimatePresence>
           </main>
         </Suspense>
       </div>

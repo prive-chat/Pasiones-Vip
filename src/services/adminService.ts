@@ -1,5 +1,6 @@
 import { supabase } from '@/src/lib/supabase';
 import { UserProfile, MediaItem, Ad } from '@/src/types';
+import { optimizeImage } from '@/src/lib/imageOptimization';
 
 export interface AuditLog {
   id: string;
@@ -148,12 +149,22 @@ export const adminService = {
   async uploadAdMedia(file: File): Promise<{ url: string; type: 'image' | 'video' }> {
     const fileExt = file.name.split('.').pop();
     const type = file.type.startsWith('video/') ? 'video' : 'image';
+    
+    let fileToUpload: File | Blob = file;
+    if (type === 'image') {
+      try {
+        fileToUpload = await optimizeImage(file, { maxWidth: 1000, maxHeight: 1000, quality: 0.75 });
+      } catch (err) {
+        console.error('Error optimizing ad image, using original:', err);
+      }
+    }
+
     const fileName = `ads/${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from('media')
-      .upload(filePath, file);
+      .upload(filePath, fileToUpload);
 
     if (uploadError) throw uploadError;
 
