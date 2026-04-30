@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           cover_url: null,
           is_verified: false,
           is_private: false,
-          role: authUserEmail === 'privechat.vip@gmail.com' ? 'super_admin' : 'user',
+          role: 'user', // Default fallback, database will provide the real role
           created_at: new Date().toISOString()
         } as UserProfile);
       } else {

@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename);
 
 const VAPID_PUBLIC_KEY = process.env.VITE_VAPID_PUBLIC_KEY || "";
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
-const VAPID_SUBJECT = "mailto:privechat.vip@gmail.com";
+const VAPID_SUBJECT = "https://pasiones-vip.vercel.app";
 
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);

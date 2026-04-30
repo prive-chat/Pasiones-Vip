@@ -183,7 +183,10 @@ ALTER TABLE public.ad_likes ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION public.is_super_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
-  RETURN (auth.jwt() ->> 'email' = 'privechat.vip@gmail.com');
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles 
+    WHERE id = auth.uid() AND role = 'super_admin'
+  );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
@@ -270,7 +273,13 @@ DROP POLICY IF EXISTS "Anuncios visibles por todos" ON public.ads;
 CREATE POLICY "Anuncios visibles por todos" ON public.ads FOR SELECT USING (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Solo Admins gestionan anuncios" ON public.ads;
-CREATE POLICY "Solo Admins gestionan anuncios" ON public.ads FOR ALL USING (public.is_super_admin());
+DROP POLICY IF EXISTS "Admins insertan anuncios" ON public.ads;
+DROP POLICY IF EXISTS "Admins actualizan anuncios" ON public.ads;
+DROP POLICY IF EXISTS "Admins eliminan anuncios" ON public.ads;
+
+CREATE POLICY "Admins insertan anuncios" ON public.ads FOR INSERT WITH CHECK (public.is_super_admin());
+CREATE POLICY "Admins actualizan anuncios" ON public.ads FOR UPDATE USING (public.is_super_admin());
+CREATE POLICY "Admins eliminan anuncios" ON public.ads FOR DELETE USING (public.is_super_admin());
 
 -- AD_LIKES
 DROP POLICY IF EXISTS "Reacciones anuncios visibles por todos" ON public.ad_likes;
