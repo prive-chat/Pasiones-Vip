@@ -76,7 +76,7 @@ export default function UserDirectory() {
               {user.role === 'super_admin' && (
                 <div className="absolute top-4 right-4">
                   <span className="inline-flex items-center rounded-full bg-primary-600/10 px-3 py-1 text-[9px] font-black text-primary-400 border border-primary-600/30 uppercase tracking-[0.1em] italic">
-                    Admin
+                    Administrador
                   </span>
                 </div>
               )}

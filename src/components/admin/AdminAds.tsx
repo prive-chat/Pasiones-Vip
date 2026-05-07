@@ -49,7 +49,7 @@ export function AdminAds({ ads, onDeleteAd, onRefresh }: AdminAdsProps) {
                   ad.status === 'active' ? "bg-green-500 text-white" : 
                   ad.status === 'paused' ? "bg-yellow-500 text-black" : "bg-blue-500 text-white"
                 )}>
-                  {ad.status}
+                  {ad.status === 'active' ? 'Activo' : ad.status === 'paused' ? 'Pausado' : 'Borrador'}
                 </span>
               </div>
             </div>
@@ -58,7 +58,9 @@ export function AdminAds({ ads, onDeleteAd, onRefresh }: AdminAdsProps) {
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <h4 className="text-white font-bold">{ad.title}</h4>
-                  <p className="text-[10px] text-white/40 uppercase font-black tracking-widest">{ad.placement}</p>
+                  <p className="text-[10px] text-white/40 uppercase font-black tracking-widest">
+                    {ad.placement === 'feed' ? 'Muro Global' : ad.placement === 'sidebar' ? 'Barra Lateral' : ad.placement}
+                  </p>
                 </div>
                 <div className="flex gap-1">
                   <Button 

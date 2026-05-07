@@ -47,7 +47,6 @@ const AdminGlobalConfig = () => {
       setSaving(key);
       const newValue = !currentValue;
       await adminService.updateGlobalConfig(key, newValue);
-      setConfigs(configs.map(c => c.key === key ? { ...c, value: newValue } : r)); // Typo fixed below
       setConfigs(prev => prev.map(c => c.key === key ? { ...c, value: newValue } : c));
     } catch (error) {
       console.error('Error updating config:', error);
@@ -106,7 +105,13 @@ const AdminGlobalConfig = () => {
                   {config.key.includes('maintenance') ? <ShieldAlert className="w-6 h-6" /> : <Settings className="w-6 h-6" />}
                 </div>
                 <div>
-                  <h3 className="text-white font-bold capitalize">{config.key.replace(/_/g, ' ')}</h3>
+                  <h3 className="text-white font-bold">
+                    {config.key === 'maintenance_mode' ? 'Modo Mantenimiento' :
+                     config.key === 'allow_new_registrations' ? 'Permitir Registros' :
+                     config.key === 'verification_required_to_post' ? 'Verificación Requerida' :
+                     config.key === 'max_upload_size_mb' ? 'Límite de Subida' :
+                     config.key.replace(/_/g, ' ')}
+                  </h3>
                   <p className="text-gray-500 text-sm mt-0.5">{config.description || 'Configuración del sistema.'}</p>
                 </div>
               </div>

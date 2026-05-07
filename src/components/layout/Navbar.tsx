@@ -59,7 +59,7 @@ export default function Navbar() {
   ];
 
   if (profile?.role?.toLowerCase().trim() === 'super_admin') {
-    menuItems.push({ label: 'Admin', path: '/admin', icon: ShieldAlert });
+    menuItems.push({ label: 'Administración', path: '/admin', icon: ShieldAlert });
   }
 
   return (

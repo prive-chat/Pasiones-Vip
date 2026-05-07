@@ -56,7 +56,7 @@ export function AdminUsers({ profiles, onToggleVerification }: AdminUsersProps) 
                       "text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-tighter",
                       profile.role === 'super_admin' ? "bg-red-500/20 text-red-400" : "bg-blue-500/20 text-blue-400"
                     )}>
-                      {profile.role}
+                      {profile.role === 'super_admin' ? 'Super Admin' : 'Usuario'}
                     </span>
                     <span className="text-[10px] text-white/20 font-bold">
                       ID: {profile.id.substring(0, 8)}...

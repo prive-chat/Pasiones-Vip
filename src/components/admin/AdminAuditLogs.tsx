@@ -142,7 +142,7 @@ const AdminAuditLogs = () => {
           >
             <div className="p-6 border-b border-[#333] flex justify-between items-center">
               <h3 className="text-xl font-bold text-white">Detalle de Acción</h3>
-              <button onClick={() => setSelectedLog(null)} className="text-gray-400 hover:text-white">Close</button>
+              <button onClick={() => setSelectedLog(null)} className="text-gray-400 hover:text-white">Cerrar</button>
             </div>
             
             <div className="p-6 overflow-y-auto space-y-6">

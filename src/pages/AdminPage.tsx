@@ -34,14 +34,14 @@ import AdminGlobalConfig from '../components/admin/AdminGlobalConfig';
 type AdminTab = 'dashboard' | 'users' | 'moderation' | 'reports' | 'ads' | 'broadcast' | 'audit' | 'config';
 
 const tabs: { id: AdminTab; label: string; icon: any }[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'dashboard', label: 'Monitor', icon: LayoutDashboard },
   { id: 'users', label: 'Usuarios', icon: Users },
-  { id: 'moderation', label: 'Moderación', icon: ImageIcon },
+  { id: 'moderation', label: 'Control', icon: ImageIcon },
   { id: 'reports', label: 'Reportes', icon: AlertTriangle },
-  { id: 'ads', label: 'Publicidad', icon: Megaphone },
-  { id: 'broadcast', label: 'Broadcast', icon: Send },
-  { id: 'audit', label: 'Logs', icon: Lock },
-  { id: 'config', label: 'Config', icon: Shield },
+  { id: 'ads', label: 'Anuncios', icon: Megaphone },
+  { id: 'broadcast', label: 'Comunicados', icon: Send },
+  { id: 'audit', label: 'Registros', icon: Lock },
+  { id: 'config', label: 'Configuración', icon: Shield },
 ];
 
 export default function AdminPage() {
