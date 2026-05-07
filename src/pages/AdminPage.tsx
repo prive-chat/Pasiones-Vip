@@ -19,6 +19,7 @@ import type { SystemStats, AuditLog } from '../services/adminService';
 import type { UserProfile, MediaItem, Ad } from '../types';
 import { cn } from '../lib/utils';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { MediaViewer } from '../components/ui/MediaViewer';
 
 // Modular Components
 import { AdminDashboard } from '../components/admin/AdminDashboard';
@@ -287,35 +288,12 @@ export default function AdminPage() {
       />
 
       {/* Media Viewer Modal */}
-      <AnimatePresence>
-        {viewerMedia && (
-          <div 
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95"
-            onClick={() => setViewerMedia(null)}
-          >
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="relative max-w-4xl w-full max-h-[90vh] rounded-3xl overflow-hidden shadow-2xl"
-              onClick={e => e.stopPropagation()}
-            >
-              {viewerMedia.type === 'image' ? (
-                <img src={viewerMedia.url} className="w-full h-full object-contain" />
-              ) : (
-                <video src={viewerMedia.url} controls autoPlay className="w-full h-full" />
-              )}
-              <Button 
-                variant="outline" 
-                className="absolute top-4 right-4 h-10 w-10 p-0 rounded-full bg-black/50 backdrop-blur-xl border-white/20"
-                onClick={() => setViewerMedia(null)}
-              >
-                ×
-              </Button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <MediaViewer
+        isOpen={!!viewerMedia}
+        url={viewerMedia?.url || null}
+        type={viewerMedia?.type || null}
+        onClose={() => setViewerMedia(null)}
+      />
     </div>
   );
 }

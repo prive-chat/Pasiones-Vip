@@ -50,13 +50,13 @@ export function MediaViewer({ isOpen, url, type, onClose }: MediaViewerProps) {
                 src={url}
                 controls
                 autoPlay
-                className="max-h-full max-w-full rounded-lg shadow-2xl ring-1 ring-white/10 object-contain"
+                className="max-h-full max-w-full w-auto h-auto rounded-lg shadow-2xl ring-1 ring-white/10"
               />
             ) : (
               <img
                 src={url}
                 alt="Full screen view"
-                className="max-h-full max-w-full rounded-lg shadow-2xl ring-1 ring-white/10 object-contain"
+                className="max-h-full max-w-full w-auto h-auto rounded-lg shadow-2xl ring-1 ring-white/10"
                 referrerPolicy="no-referrer"
               />
             )}
