@@ -37,7 +37,7 @@ export default function UserIdentityBar() {
         <div className="absolute inset-0 z-0 bg-zinc-950/50 backdrop-blur-md" />
       )}
 
-      <div className="relative z-10 container mx-auto max-w-6xl px-4 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+      <div className="relative z-10 container mx-auto max-w-6xl px-4 py-6 md:py-20 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <Link to={`/profile/${profile.id}`} className="flex items-center space-x-4 group min-w-0">
           <motion.div 
             initial={{ opacity: 0, x: -10 }}
