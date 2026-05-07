@@ -13,7 +13,6 @@ import { publicAdService } from '../services/publicAdService';
 import { AdCard } from '../components/ui/AdCard';
 import UserIdentityBar from '../components/layout/UserIdentityBar';
 import { useQuery } from '@tanstack/react-query';
-import { HomeHero } from '../features/home/HomeHero';
 import { HighlightStories } from '../features/home/HighlightStories';
 
 export default function HomePage() {
@@ -32,8 +31,6 @@ export default function HomePage() {
       {view === 'feed' && <UserIdentityBar />}
       
       <div className="container mx-auto max-w-6xl px-4 py-8">
-        {view === 'feed' && <HomeHero />}
-
         <HomeActionArea
           leftContent={
             profile && !profile.is_verified && (
