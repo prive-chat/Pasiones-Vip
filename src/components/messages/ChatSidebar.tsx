@@ -44,14 +44,15 @@ export const ChatSidebar: FC<ChatSidebarProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-white/10">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+      <div className="p-4 border-b border-white/10 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
+        <div className="relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-primary-400 transition-colors" size={16} />
           <Input
-            placeholder="Buscar chats..."
+            placeholder="Buscar conversaciones..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10"
+            className="pl-12 h-11 bg-white/5 border-white/5 focus:bg-white/10 transition-all rounded-2xl italic font-medium"
             variant="glass"
           />
         </div>
@@ -87,46 +88,62 @@ export const ChatSidebar: FC<ChatSidebarProps> = ({
                       key={conv.userId}
                       onClick={() => onConversationSelect(conv.userId)}
                       className={cn(
-                        "w-full flex items-center space-x-3 p-4 transition-all hover:bg-white/5 text-left group",
-                        isActive && "bg-primary-600/10 border-l-4 border-primary-500"
+                        "w-full flex items-center space-x-3 p-4 transition-all hover:bg-white/5 text-left group relative",
+                        isActive && "bg-white/[0.03]"
                       )}
                     >
+                      {isActive && (
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-600 shadow-[0_0_15px_rgba(230,0,0,0.5)]" />
+                      )}
+                      
                       <div className="relative shrink-0">
-                        <div className="h-12 w-12 rounded-full bg-primary-600/20 flex items-center justify-center text-primary-400 font-bold overflow-hidden ring-2 ring-white/10 transition-transform group-hover:scale-105">
+                        <div className={cn(
+                          "h-14 w-14 rounded-2xl flex items-center justify-center text-white/40 font-black overflow-hidden ring-1 transition-all duration-300 group-hover:scale-105",
+                          isActive ? "ring-primary-500/50" : "ring-white/10"
+                        )}>
                           {profile?.avatar_url ? (
                             <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                           ) : (
-                            profile?.full_name?.[0] || 'U'
+                            <div className="w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center text-xl text-white/20">
+                              {profile?.full_name?.[0] || 'U'}
+                            </div>
                           )}
                         </div>
-                        {profile?.is_verified && (
-                          <div className="absolute -bottom-1 -right-1 rounded-full bg-primary-600 p-0.5 ring-2 ring-black">
-                            <CheckCircle2 size={10} className="text-white" />
-                          </div>
-                        )}
+                        <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-zinc-900 flex items-center justify-center">
+                          <div className="h-2.5 w-2.5 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)] border border-black" />
+                        </div>
                       </div>
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="font-bold text-white truncate group-hover:text-primary-400 transition-colors">
-                            {profile?.full_name || 'Usuario'}
-                          </span>
-                          <div className="flex items-center space-x-2 shrink-0">
-                            {conv.unreadCount > 0 && (
-                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-500 text-[10px] font-black text-white shadow-lg ring-1 ring-black">
-                                {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
-                              </span>
-                            )}
-                            <span className="text-[10px] text-white/40">
-                              {format(new Date(conv.timestamp), 'HH:mm')}
+                          <div className="flex items-center space-x-1 min-w-0">
+                            <span className={cn(
+                              "font-black tracking-tight truncate transition-colors uppercase italic text-sm",
+                              isActive ? "text-primary-400" : "text-white"
+                            )}>
+                              {profile?.full_name || 'Usuario'}
                             </span>
+                            {profile?.is_verified && (
+                              <CheckCircle2 size={12} className="text-primary-400 shrink-0" />
+                            )}
                           </div>
+                          <span className="text-[10px] font-bold text-white/20 shrink-0 tabular-nums">
+                            {format(new Date(conv.timestamp), 'HH:mm')}
+                          </span>
                         </div>
-                        <p className={cn(
-                          "text-xs truncate",
-                          conv.unreadCount > 0 ? "text-white font-bold" : "text-white/60"
-                        )}>
-                          {lastMsgText}
-                        </p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={cn(
+                            "text-[11px] truncate italic leading-tight",
+                            conv.unreadCount > 0 ? "text-white font-black" : "text-white/40"
+                          )}>
+                            {lastMsgText}
+                          </p>
+                          {conv.unreadCount > 0 && (
+                            <span className="flex h-5 min-w-[20px] px-1 items-center justify-center rounded-full bg-primary-600 text-[10px] font-black text-white shadow-lg shadow-primary-900/40 animate-pulse-slow">
+                              {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </button>
                   );

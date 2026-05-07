@@ -10,6 +10,8 @@ import { cn } from '@/src/lib/utils';
 import { Message, UserProfile, MediaItem } from '@/src/types';
 import { X, AlertCircle } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
+import { isSameDay, format, isToday, isYesterday } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface ChatWindowProps {
   targetUser: UserProfile | null;
@@ -209,20 +211,40 @@ export const ChatWindow: FC<ChatWindowProps> = ({
             style={{ height: '100%', width: '100%' }}
             data={messages}
             initialTopMostItemIndex={messages.length - 1}
-            itemContent={(_, msg) => (
-              <div className="px-4 py-2 hover:bg-white/[0.02] transition-colors group">
-                <MessageBubble 
-                  key={msg.id} 
-                  message={msg} 
-                  isMe={msg.sender_id === currentUser?.id} 
-                  currentUserId={currentUser?.id}
-                  onMediaClick={onMediaClick}
-                  onDelete={onDeleteMessage}
-                  onReact={onReactMessage}
-                  onVisible={onMessageVisible}
-                />
-              </div>
-            )}
+            itemContent={(index, msg) => {
+              const prevMsg = messages[index - 1];
+              const showDateHeader = !prevMsg || !isSameDay(new Date(msg.created_at), new Date(prevMsg.created_at));
+              
+              const getDateLabel = (date: Date) => {
+                if (isToday(date)) return 'Hoy';
+                if (isYesterday(date)) return 'Ayer';
+                return format(date, "d 'de' MMMM", { locale: es });
+              };
+
+              return (
+                <div className="px-4 py-1.5 transition-colors group">
+                  {showDateHeader && (
+                    <div className="flex justify-center my-6 sticky top-2 z-10">
+                      <div className="bg-zinc-800/80 backdrop-blur-md border border-white/5 rounded-full px-4 py-1 shadow-xl">
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+                          {getDateLabel(new Date(msg.created_at))}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <MessageBubble 
+                    key={msg.id} 
+                    message={msg} 
+                    isMe={msg.sender_id === currentUser?.id} 
+                    currentUserId={currentUser?.id}
+                    onMediaClick={onMediaClick}
+                    onDelete={onDeleteMessage}
+                    onReact={onReactMessage}
+                    onVisible={onMessageVisible}
+                  />
+                </div>
+              );
+            }}
             components={{
               Footer: () => <div className="h-4" />
             }}
@@ -341,28 +363,32 @@ export const ChatWindow: FC<ChatWindowProps> = ({
               </Button>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-between bg-primary-600/10 border border-primary-500/20 rounded-xl p-2 px-4 animate-pulse-slow">
-              <div className="flex items-center space-x-3">
-                <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-sm font-bold text-white tabular-nums">{formatTime(recordingTime)}</span>
-                <span className="text-xs text-white/40 uppercase tracking-widest font-black">Grabando audio...</span>
+            <div className="flex-1 flex items-center justify-between bg-passion-red/10 border border-passion-red/20 rounded-2xl p-3 px-5 animate-pulse-slow">
+              <div className="flex items-center space-x-4">
+                <div className="relative flex items-center justify-center">
+                  <div className="absolute h-4 w-4 rounded-full bg-passion-red animate-ping" />
+                  <div className="relative h-3 w-3 rounded-full bg-passion-red shadow-[0_0_10px_rgba(230,0,0,0.5)]" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-black text-white tabular-nums tracking-tighter leading-none">{formatTime(recordingTime)}</span>
+                  <span className="text-[9px] text-passion-red/60 uppercase tracking-widest font-black leading-none mt-1">Grabando Audio</span>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-4">
                 <button
                   type="button"
                   onClick={() => setIsRecording(false)}
-                  className="p-2 text-white/40 hover:text-white transition-colors"
+                  className="p-2 text-white/30 hover:text-white transition-colors uppercase text-[9px] font-black tracking-widest"
                 >
-                  <X size={20} />
+                  Cancelar
                 </button>
                 <button
                   type="button"
                   onClick={() => {
-                    // In a real app, this would stop recording and send the blob
                     setIsRecording(false);
                     onSendMessage({ preventDefault: () => {} } as any);
                   }}
-                  className="p-2 bg-primary-600 rounded-full text-white shadow-lg"
+                  className="h-10 w-10 flex items-center justify-center bg-passion-red rounded-full text-white shadow-xl shadow-passion-red/20 hover:scale-110 active:scale-95 transition-all"
                 >
                   <StopCircle size={20} />
                 </button>

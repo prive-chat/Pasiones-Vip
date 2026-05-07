@@ -135,10 +135,10 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
     >
       <div
         className={cn(
-          "relative max-w-[85%] sm:max-w-[70%] px-4 py-2.5 shadow-xl transition-all",
+          "relative max-w-[85%] sm:max-w-[70%] px-4 py-3 shadow-2xl transition-all",
           isMe 
-            ? "bg-primary-600 text-white rounded-2xl rounded-tr-none ml-12" 
-            : "bg-white/10 text-white rounded-2xl rounded-tl-none mr-12 border border-white/10 backdrop-blur-md"
+            ? "bg-gradient-to-br from-primary-600 to-primary-700 text-white rounded-[1.5rem] rounded-tr-none ml-12" 
+            : "bg-white/10 text-white rounded-[1.5rem] rounded-tl-none mr-12 border border-white/10 backdrop-blur-md"
         )}
       >
         <div className="relative z-10">
@@ -146,18 +146,18 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
         </div>
 
         <div className={cn(
-          "mt-1 flex items-center justify-end space-x-1 text-[10px] font-medium",
-          isMe ? "text-primary-100/70" : "text-white/40"
+          "mt-2 flex items-center justify-end space-x-1.5 text-[10px] font-black uppercase tracking-tighter",
+          isMe ? "text-primary-100/60" : "text-white/40"
         )}>
-          <span>{format(new Date(message.created_at), 'HH:mm')}</span>
+          <span className="italic">{format(new Date(message.created_at), 'HH:mm')}</span>
           {isMe && (
             <div className="flex items-center">
               {message.is_read ? (
-                <CheckCheck size={12} className="text-passion-red" />
+                <CheckCheck size={14} className="text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]" />
               ) : message.is_delivered ? (
-                <CheckCheck size={12} className="text-white/40" />
+                <CheckCheck size={14} className="text-white/40" />
               ) : (
-                <Check size={12} className="opacity-60" />
+                <Check size={14} className="opacity-60" />
               )}
             </div>
           )}
