@@ -18,13 +18,21 @@ import {
   UserMinus,
   UserCheck,
   Clock,
-  Camera
+  Camera,
+  Star,
+  Coins,
+  ShieldCheck,
+  MapPin,
+  Tag,
+  Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { MediaViewer } from '@/src/components/ui/MediaViewer';
 import { mediaService } from '@/src/services/mediaService';
 import { profileService } from '@/src/services/profileService';
+import { reviewService } from '@/src/services/reviewService';
 import { useAuth } from '@/src/hooks/useAuth';
 import { cn } from '@/src/lib/utils';
 import { useMutation, useQueryClient, useInfiniteQuery, useQuery } from '@tanstack/react-query';
@@ -32,6 +40,7 @@ import MediaCard from '@/src/components/MediaCard';
 import { Loader2 } from 'lucide-react';
 import { ProfileSkeleton } from '@/src/components/Skeletons';
 import { useUserStats } from '@/src/hooks/useUserStats';
+import { Input } from '@/src/components/ui/Input';
 
 export default function UserProfilePage() {
   const { userId } = useParams<{ userId: string }>();
@@ -47,7 +56,17 @@ export default function UserProfilePage() {
   const isMe = currentUser?.id === userId;
   const observerTarget = useRef(null);
 
+  const [activeTab, setActiveTab] = useState<'posts' | 'reviews' | 'about'>('posts');
+  const [isTipModalOpen, setIsTipModalOpen] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  
+  // Review state
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
   const queryKey = ['user-media', userId, currentUser?.id];
+  const reviewsQueryKey = ['user-reviews', userId];
 
   const {
     data: mediaData,
@@ -62,6 +81,12 @@ export default function UserProfilePage() {
       return lastPage.length === 12 ? allPages.length : undefined;
     },
     enabled: !!userId && (isMe || !profile?.is_private || followStatus === 'accepted'),
+  });
+
+  const { data: reviews = [], isLoading: loadingReviews } = useQuery({
+    queryKey: reviewsQueryKey,
+    queryFn: () => reviewService.fetchUserReviews(userId!),
+    enabled: !!userId,
   });
 
   const media = mediaData?.pages.flat() || [];
@@ -129,6 +154,30 @@ export default function UserProfilePage() {
       queryClient.invalidateQueries({ queryKey: ['user-stats', userId] });
     } catch (err) {
       console.error('Error unfollowing user:', err);
+    }
+  };
+
+  const handleAddReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !userId || !profile) return;
+    
+    setSubmittingReview(true);
+    try {
+      await reviewService.addReview({
+        target_user_id: userId,
+        author_id: currentUser.id,
+        rating,
+        comment
+      });
+      setComment('');
+      setRating(5);
+      setIsReviewModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: reviewsQueryKey });
+      // Update local profile rating if needed or invalidate profile query
+    } catch (err) {
+      console.error('Error adding review:', err);
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -219,7 +268,23 @@ export default function UserProfilePage() {
                 {profile.bio}
               </p>
             )}
-            <div className="mt-3 flex items-center justify-center space-x-6 md:justify-start">
+            
+            <div className="mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
+              {profile.city && (
+                <span className="inline-flex items-center rounded-full bg-white/5 border border-white/10 px-3 py-1 text-[10px] font-black text-white/60 uppercase tracking-widest italic">
+                  <MapPin size={12} className="mr-1 text-primary-500" />
+                  {profile.city}
+                </span>
+              )}
+              {profile.category && (
+                <span className="inline-flex items-center rounded-full bg-primary-600/10 border border-primary-600/30 px-3 py-1 text-[10px] font-black text-primary-400 uppercase tracking-widest italic">
+                  <Tag size={12} className="mr-1 text-primary-500" />
+                  {profile.category}
+                </span>
+              )}
+            </div>
+
+            <div className="mt-4 flex items-center justify-center space-x-6 md:justify-start">
               <div className="flex flex-col md:flex-row md:items-center md:space-x-1.5">
                 <span className="text-lg font-black text-white">{followCounts?.followers || 0}</span>
                 <span className="text-xs font-bold text-white/40 uppercase tracking-wider">Seguidores</span>
@@ -272,6 +337,13 @@ export default function UserProfilePage() {
                     <MessageSquare size={20} />
                   </Button>
                 </Link>
+                <Button 
+                  variant="glass" 
+                  className="h-11 px-4 bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white"
+                  onClick={() => setIsTipModalOpen(true)}
+                >
+                  <Coins size={20} />
+                </Button>
               </>
             )}
           </div>
@@ -279,56 +351,326 @@ export default function UserProfilePage() {
 
         <div className="mb-8 h-px bg-white/10" />
 
+        {/* Tabs */}
+        <div className="flex items-center space-x-8 mb-8 overflow-x-auto pb-2 scrollbar-none">
+          {[
+            { id: 'posts', label: 'Publicaciones', icon: LayoutGrid },
+            { id: 'reviews', label: 'Reseñas', icon: Star },
+            { id: 'about', label: 'Información', icon: UserIcon },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={cn(
+                "flex items-center space-x-2 py-2 border-b-2 transition-all font-black uppercase text-xs tracking-[0.2em] italic whitespace-nowrap",
+                activeTab === tab.id 
+                  ? "border-primary-600 text-white" 
+                  : "border-transparent text-white/30 hover:text-white/60"
+              )}
+            >
+              <tab.icon size={16} className={activeTab === tab.id ? "text-primary-600" : ""} />
+              <span>{tab.label}</span>
+              {tab.id === 'reviews' && reviews.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-white/10 text-[8px]">
+                  {reviews.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
         {/* Content Section */}
         <section>
-          {!canViewContent ? (
-            <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/10 bg-white/5 py-20 text-center">
-              <div className="mb-4 rounded-full bg-white/5 p-4 text-white/20">
-                <Lock size={48} />
+          {activeTab === 'posts' && (
+            !canViewContent ? (
+              <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/10 bg-white/5 py-20 text-center">
+                <div className="mb-4 rounded-full bg-white/5 p-4 text-white/20">
+                  <Lock size={48} />
+                </div>
+                <h3 className="text-xl font-bold text-white">Esta cuenta es privada</h3>
+                <p className="mt-1 text-white/50">Sigue a este usuario para ver sus publicaciones.</p>
+                <Button onClick={handleFollow} className="mt-6" disabled={followStatus === 'pending'}>
+                  {followStatus === 'pending' ? 'Solicitud enviada' : 'Solicitar seguimiento'}
+                </Button>
               </div>
-              <h3 className="text-xl font-bold text-white">Esta cuenta es privada</h3>
-              <p className="mt-1 text-white/50">Sigue a este usuario para ver sus publicaciones.</p>
-              <Button onClick={handleFollow} className="mt-6" disabled={followStatus === 'pending'}>
-                {followStatus === 'pending' ? 'Solicitud enviada' : 'Solicitar seguimiento'}
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="mb-8 flex items-center space-x-2">
-                <LayoutGrid size={24} className="text-primary-400" />
-                <h2 className="text-2xl font-bold text-white">Publicaciones ({media.length})</h2>
+            ) : (
+              <>
+                {media.length > 0 ? (
+                  <div className="flex flex-col gap-8 max-w-2xl mx-auto w-full">
+                    {media.map((item, index) => (
+                      <MediaCard
+                        key={item.id}
+                        item={item}
+                        index={index}
+                        queryKey={queryKey}
+                        onView={(url, type) => setViewerMedia({ url, type })}
+                      />
+                    ))}
+                    
+                    {/* Infinite Scroll Trigger */}
+                    <div ref={observerTarget} className="h-20 flex items-center justify-center">
+                      {isFetchingNextPage && <Loader2 className="h-6 w-6 animate-spin text-primary-600" />}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/10 bg-white/5 py-20 text-center">
+                    <div className="mb-4 rounded-full bg-white/5 p-4 text-white/20">
+                      <LayoutGrid size={48} />
+                    </div>
+                    <h3 className="text-lg font-bold text-white">Sin publicaciones aún</h3>
+                    <p className="mt-1 text-white/50">Este usuario todavía no ha compartido ningún medio.</p>
+                  </div>
+                )}
+              </>
+            )
+          )}
+
+          {activeTab === 'reviews' && (
+            <div className="space-y-8 animate-in fade-in duration-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-black text-white italic uppercase">Reseñas y Calificaciones</h2>
+                  <div className="mt-1 flex items-center">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} size={14} className={cn("mr-0.5", s <= Math.round(profile.rating || 0) ? "text-amber-500 fill-amber-500" : "text-white/10")} />
+                    ))}
+                    <span className="ml-2 text-xs font-bold text-white/40 uppercase tracking-widest">
+                      {profile.rating?.toFixed(1) || '0.0'} de 5 ({reviews.length} opiniones)
+                    </span>
+                  </div>
+                </div>
+                {!isMe && currentUser && (
+                  <Button onClick={() => setIsReviewModalOpen(true)} variant="glass" className="h-10 text-xs font-black uppercase tracking-widest italic">
+                    Escribir Reseña
+                  </Button>
+                )}
               </div>
 
-              {media.length > 0 ? (
-                <div className="flex flex-col gap-8 max-w-2xl mx-auto w-full">
-                  {media.map((item, index) => (
-                    <MediaCard
-                      key={item.id}
-                      item={item}
-                      index={index}
-                      queryKey={queryKey}
-                      onView={(url, type) => setViewerMedia({ url, type })}
-                    />
+              {reviews.length > 0 ? (
+                <div className="grid grid-cols-1 gap-6">
+                  {reviews.map((review) => (
+                    <Card key={review.id} className="glass-card border-none p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="h-10 w-10 rounded-full overflow-hidden bg-white/5">
+                            {review.author?.avatar_url ? (
+                              <img src={review.author.avatar_url} alt={review.author.full_name} className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-white/20">
+                                <UserIcon size={20} />
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold text-white text-sm">
+                              {review.author?.full_name || 'Usuario'}
+                              {review.author?.is_verified && <BadgeCheck size={14} className="inline ml-1 text-primary-500" />}
+                            </p>
+                            <div className="flex items-center mt-0.5">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star key={s} size={10} className={cn("mr-0.5", s <= review.rating ? "text-amber-500 fill-amber-500" : "text-white/10")} />
+                              ))}
+                              <span className="ml-2 text-[10px] text-white/20 font-bold uppercase tracking-widest">
+                                {formatDistanceToNow(new Date(review.created_at), { addSuffix: true, locale: es })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="mt-4 text-sm text-white/70 leading-relaxed italic">
+                        "{review.comment}"
+                      </p>
+                    </Card>
                   ))}
-                  
-                  {/* Infinite Scroll Trigger */}
-                  <div ref={observerTarget} className="h-20 flex items-center justify-center">
-                    {isFetchingNextPage && <Loader2 className="h-6 w-6 animate-spin text-primary-600" />}
-                  </div>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/10 bg-white/5 py-20 text-center">
-                  <div className="mb-4 rounded-full bg-white/5 p-4 text-white/20">
-                    <LayoutGrid size={48} />
-                  </div>
-                  <h3 className="text-lg font-bold text-white">Sin publicaciones aún</h3>
-                  <p className="mt-1 text-white/50">Este usuario todavía no ha compartido ningún medio.</p>
+                <div className="flex flex-col items-center justify-center py-12 text-center bg-white/5 rounded-2xl border-2 border-dashed border-white/10">
+                  <Star size={40} className="text-white/10 mb-4" />
+                  <p className="text-white/40 font-bold uppercase tracking-widest text-xs italic">Aún no hay reseñas para este usuario.</p>
                 </div>
               )}
-            </>
+            </div>
+          )}
+
+          {activeTab === 'about' && (
+            <div className="max-w-2xl mx-auto space-y-8 animate-in slide-in-from-bottom duration-500">
+              <Card className="glass-card border-none p-8">
+                <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-widest italic">Acerca de {profile.full_name?.split(' ')[0]}</h3>
+                <div className="space-y-6">
+                  <div className="flex items-start space-x-4">
+                    <div className="p-3 bg-primary-600/20 rounded-xl text-primary-400">
+                      <UserIcon size={24} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black text-white/30 uppercase tracking-[0.2em] mb-1">Descripción</p>
+                      <p className="text-white/80 leading-relaxed italic">
+                        {profile.bio || 'Sin descripción disponible.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-6 border-t border-white/10">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
+                        <MapPin size={24} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-white/30 uppercase tracking-[0.2em]">Ciudad</p>
+                        <p className="text-white font-bold">{profile.city || 'No especificada'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 bg-purple-500/10 rounded-xl text-purple-400">
+                        <Tag size={24} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-white/30 uppercase tracking-[0.2em]">Categoría</p>
+                        <p className="text-white font-bold">{profile.category || 'No especificada'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Identity Verification Banner */}
+              <div className="rounded-2xl overflow-hidden relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary-600/20 to-primary-800/20 pointer-events-none" />
+                <div className="relative p-8 bg-black/40 backdrop-blur-xl border border-white/10 flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="flex items-center space-x-4">
+                    <div className={cn(
+                      "p-4 rounded-full shadow-2xl",
+                      profile.is_verified ? "bg-green-500/20 text-green-400" : "bg-white/5 text-white/20"
+                    )}>
+                      <ShieldCheck size={40} />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-black text-white uppercase italic tracking-wider">Identidad Verificada</h4>
+                      <p className="text-sm text-white/40 font-medium">
+                        {profile.is_verified 
+                          ? 'Este usuario ha confirmado su identidad oficialmente.'
+                          : 'Este usuario aún no ha verificado su cuenta.'}
+                      </p>
+                    </div>
+                  </div>
+                  {profile.is_verified && (
+                    <div className="px-4 py-2 bg-green-500/10 rounded-full border border-green-500/30 text-green-400 text-xs font-black uppercase tracking-widest italic">
+                      Verificado 100%
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
         </section>
       </div>
+
+      {/* Tip Modal */}
+      <AnimatePresence>
+        {isTipModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-sm overflow-hidden rounded-[3rem] p-8 glass-card border border-amber-500/20 shadow-[0_0_50px_rgba(245,158,11,0.1)]"
+            >
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-500 mb-6 mx-auto">
+                <Coins size={32} />
+              </div>
+              <h3 className="text-2xl font-black text-white text-center italic uppercase mb-2">Enviar Propina</h3>
+              <p className="text-white/40 text-center text-sm mb-8 italic">Apoya a {profile.full_name?.split(' ')[0]} por su contenido.</p>
+              
+              <div className="grid grid-cols-3 gap-3 mb-8">
+                {[5, 10, 20, 50, 100].map((amount) => (
+                  <button
+                    key={amount}
+                    className="py-3 px-2 rounded-2xl bg-white/5 border border-white/10 text-white font-black hover:bg-amber-500 hover:border-amber-400 hover:scale-105 transition-all duration-300"
+                    onClick={() => {
+                      alert(`Redirigiendo a pasarela para propina de ${amount}€`);
+                      setIsTipModalOpen(false);
+                    }}
+                  >
+                    {amount}€
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex flex-col space-y-3">
+                <Button 
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-black font-black uppercase"
+                  onClick={() => setIsTipModalOpen(false)}
+                >
+                  Personalizado
+                </Button>
+                <Button variant="ghost" className="text-white/20 hover:text-white" onClick={() => setIsTipModalOpen(false)}>
+                  Cerrar
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Review Modal */}
+        {isReviewModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-lg overflow-hidden rounded-[2.5rem] p-8 glass-card border border-primary-500/20 shadow-2xl"
+            >
+              <h3 className="text-2xl font-black text-white italic uppercase mb-2">Calificar a {profile.full_name?.split(' ')[0]}</h3>
+              <p className="text-white/40 text-sm mb-8 uppercase tracking-widest font-black">Tu opinión ayuda a la comunidad</p>
+              
+              <form onSubmit={handleAddReview} className="space-y-6">
+                <div className="flex justify-center space-x-3 mb-8">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setRating(s)}
+                      className="transition-transform hover:scale-125 focus:outline-none"
+                    >
+                      <Star 
+                        size={36} 
+                        className={cn(
+                          "transition-all",
+                          s <= rating ? "text-amber-500 fill-amber-500" : "text-white/10"
+                        )} 
+                      />
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-white/40 uppercase tracking-widest italic ml-1">Tu experiencia</label>
+                  <textarea
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Cuéntanos qué tal fue el servicio..."
+                    className="w-full min-h-[120px] rounded-2xl bg-white/5 border border-white/10 p-4 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all resize-none italic"
+                    required
+                  />
+                  <div className="flex justify-end">
+                    <span className="text-[10px] font-black text-white/10 uppercase italic">
+                      {comment.length}/300
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col space-y-3 pt-4">
+                  <Button type="submit" className="w-full h-12 text-lg italic" isLoading={submittingReview}>
+                    Enviar Reseña
+                  </Button>
+                  <Button variant="ghost" className="text-white/40 hover:text-white" onClick={() => setIsReviewModalOpen(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <MediaViewer
         isOpen={!!viewerMedia}

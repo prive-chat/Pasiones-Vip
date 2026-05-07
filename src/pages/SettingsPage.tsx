@@ -6,13 +6,15 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../components/ui/Card';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Camera, Check, AlertCircle, ShieldCheck, Mail, Calendar, Bell, BellOff, Trash2, Key, Lock } from 'lucide-react';
+import { User, Camera, Check, AlertCircle, ShieldCheck, Mail, Calendar, Bell, BellOff, Trash2, Key, Lock, BarChart3, BadgeCheck, MapPin, Tag, UploadCloud } from 'lucide-react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { profileService } from '../services/profileService';
+import { useUserStats } from '../hooks/useUserStats';
 import { optimizeImage } from '../lib/imageOptimization';
 
 export default function SettingsPage() {
   const { user, profile, refreshProfile, signOut } = useAuth();
+  const { stats } = useUserStats(user?.id);
   const navigate = useNavigate();
   const { isSubscribed, subscribe, unsubscribe, isSupported, permission } = usePushNotifications(user?.id);
   const [fullName, setFullName] = useState('');
@@ -20,10 +22,13 @@ export default function SettingsPage() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
   const [bio, setBio] = useState('');
+  const [city, setCity] = useState('');
+  const [category, setCategory] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingVerif, setUploadingVerif] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -43,6 +48,8 @@ export default function SettingsPage() {
       setAvatarUrl(profile.avatar_url || '');
       setCoverUrl(profile.cover_url || '');
       setBio(profile.bio || '');
+      setCity(profile.city || '');
+      setCategory(profile.category || '');
       setIsPrivate(profile.is_private || false);
     }
   }, [profile]);
@@ -70,6 +77,8 @@ export default function SettingsPage() {
           avatar_url: avatarUrl,
           cover_url: coverUrl,
           bio: bio,
+          city: city,
+          category: category,
           is_private: isPrivate,
         })
         .eq('id', user.id);
@@ -260,6 +269,47 @@ export default function SettingsPage() {
     }
   };
 
+  const handleVerificationUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setUploadingVerif(true);
+    setMessage(null);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `verif-${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `verifications/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('media')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('media')
+        .getPublicUrl(filePath);
+      
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ 
+          verification_status: 'pending',
+          verification_id_url: publicUrl 
+        })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+      
+      setMessage({ type: 'success', text: 'Documento enviado para revisión. Pronto serás verificado.' });
+      await refreshProfile();
+    } catch (error: any) {
+      setMessage({ type: 'error', text: 'Error al enviar verificación: ' + error.message });
+    } finally {
+      setUploadingVerif(false);
+    }
+  };
+
   return (
     <div className="container mx-auto max-w-4xl px-4 py-12">
       <div className="mb-8">
@@ -440,6 +490,26 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input
+                      label="Ciudad"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="Ej: Madrid, Londres, Tokyo..."
+                      leftElement={<MapPin size={16} className="text-primary-500" />}
+                      variant="glass"
+                    />
+
+                    <Input
+                      label="Categoría"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      placeholder="Ej: Escort, Masajista, Trans..."
+                      leftElement={<Tag size={16} className="text-primary-500" />}
+                      variant="glass"
+                    />
+                  </div>
+
                   <div className="flex items-center justify-between rounded-xl bg-white/5 p-4 border border-white/10">
                     <div>
                       <h4 className="text-sm font-bold text-white">Perfil Privado</h4>
@@ -483,6 +553,29 @@ export default function SettingsPage() {
               </form>
             </CardContent>
           </Card>
+
+          {/* Stats Panel */}
+          <div className="mt-8">
+            <h3 className="text-sm font-bold text-white mb-4 px-1 flex items-center">
+              <BarChart3 size={16} className="mr-2 text-primary-500" />
+              Estadísticas de mi Perfil
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { label: 'Seguidores', value: stats?.followers || 0, color: 'bg-blue-500' },
+                { label: 'Likes Recibidos', value: stats?.likes || 0, color: 'bg-green-500' },
+                { label: 'Mensajes', value: stats?.messagesReceived || 0, color: 'bg-purple-500' },
+                { label: 'Valoración', value: profile?.rating?.toFixed(1) || '0.0', color: 'bg-amber-500' },
+              ].map((stat, i) => (
+                <Card key={i} className="glass-card p-4 border-none flex flex-col items-center justify-center text-center">
+                  <span className="text-2xl font-black text-white italic">{stat.value}</span>
+                  <span className="text-[10px] uppercase font-bold text-white/40 tracking-wider mt-1">{stat.label}</span>
+                  <div className={`w-8 h-1 ${stat.color} rounded-full mt-3 opacity-20`} />
+                </Card>
+              ))}
+            </div>
+            <p className="text-[10px] text-white/20 mt-4 italic text-center uppercase tracking-widest font-bold">Resumen de los últimos 30 días</p>
+          </div>
 
           <div className="mt-8">
             <h3 className="text-sm font-bold text-white mb-4 px-1">Notificaciones</h3>
@@ -535,6 +628,71 @@ export default function SettingsPage() {
             <h3 className="text-sm font-bold text-white mb-4 px-1">Seguridad</h3>
             
             <div className="space-y-4">
+              {/* Verification Section */}
+              <Card className="glass-card border-none bg-gradient-to-br from-primary-600/5 to-transparent">
+                <CardHeader>
+                  <CardTitle className="text-base font-bold text-white flex items-center">
+                    <BadgeCheck size={18} className="mr-2 text-primary-400" />
+                    Solicitar Verificación de Identidad
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col space-y-4">
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                      <div className="flex items-start space-x-3">
+                        <div className={`p-2 rounded-lg ${
+                          profile?.verification_status === 'verified' ? 'bg-green-500/20 text-green-400' :
+                          profile?.verification_status === 'pending' ? 'bg-amber-500/20 text-amber-400' :
+                          'bg-red-500/20 text-red-400'
+                        }`}>
+                          <ShieldCheck size={20} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white">
+                            Estado: {
+                              profile?.verification_status === 'verified' ? 'Verificado' :
+                              profile?.verification_status === 'pending' ? 'Pendiente de Revisión' :
+                              profile?.verification_status === 'rejected' ? 'Rechazado' : 'No Iniciado'
+                            }
+                          </p>
+                          <p className="text-xs text-white/40 mt-1">
+                            {profile?.verification_status === 'verified' 
+                              ? 'Tu identidad ha sido confirmada. Disfrutas de máxima confianza.'
+                              : profile?.verification_status === 'pending'
+                              ? 'Estamos revisando tu documento. Te avisaremos pronto.'
+                              : 'Para verificar tu perfil, sube una foto de tu documento de identidad o una selfie sosteniendo un cartel con la fecha.'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {(!profile?.verification_status || profile.verification_status === 'none' || profile.verification_status === 'rejected') && (
+                      <div 
+                        className="relative h-24 w-full rounded-xl border-2 border-dashed border-white/10 bg-white/5 overflow-hidden group cursor-pointer hover:bg-white/10 transition-colors flex flex-col items-center justify-center"
+                        onClick={() => document.getElementById('verif-input')?.click()}
+                      >
+                        {uploadingVerif ? (
+                          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
+                        ) : (
+                          <>
+                            <UploadCloud size={24} className="text-white/20 mb-1" />
+                            <span className="text-xs text-white/40 font-bold uppercase tracking-widest">Subir Documento</span>
+                          </>
+                        )}
+                        <input 
+                          id="verif-input"
+                          type="file" 
+                          className="hidden" 
+                          accept="image/*" 
+                          onChange={handleVerificationUpload}
+                          disabled={uploadingVerif}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card className="glass-card border-none">
                 <CardHeader>
                   <CardTitle className="text-base font-bold text-white flex items-center">

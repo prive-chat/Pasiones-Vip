@@ -36,14 +36,24 @@ export const profileService = {
     return data as UserProfile;
   },
 
-  async searchProfiles(query: string) {
-    if (!query.trim()) return [];
-    
-    const { data, error } = await supabase
+  async searchProfiles(query: string, filters?: { city?: string; category?: string }) {
+    let queryBuilder = supabase
       .from('profiles')
-      .select('*')
-      .or(`full_name.ilike.%${query}%,username.ilike.%${query}%`)
-      .limit(10);
+      .select('*');
+
+    if (query.trim()) {
+      queryBuilder = queryBuilder.or(`full_name.ilike.%${query}%,username.ilike.%${query}%`);
+    }
+
+    if (filters?.city) {
+      queryBuilder = queryBuilder.ilike('city', `%${filters.city}%`);
+    }
+
+    if (filters?.category) {
+      queryBuilder = queryBuilder.ilike('category', `%${filters.category}%`);
+    }
+
+    const { data, error } = await queryBuilder.limit(20);
 
     if (error) throw error;
     return data as UserProfile[];
@@ -125,7 +135,7 @@ export const profileService = {
 
   async fetchUserStats(userId: string) {
     // Fetch followers and following counts
-    const [followers, following] = await Promise.all([
+    const [followers, following, posts, messages] = await Promise.all([
       supabase
         .from('follows')
         .select('*', { count: 'exact', head: true })
@@ -135,7 +145,15 @@ export const profileService = {
         .from('follows')
         .select('*', { count: 'exact', head: true })
         .eq('follower_id', userId)
-        .eq('status', 'accepted')
+        .eq('status', 'accepted'),
+      supabase
+        .from('media')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId),
+      supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', userId)
     ]);
 
     // Fetch user's media IDs first to count likes accurately
@@ -158,7 +176,9 @@ export const profileService = {
     return {
       followers: followers.count || 0,
       following: following.count || 0,
-      likes: likesCount
+      posts: posts.count || 0,
+      likes: likesCount,
+      messagesReceived: messages.count || 0
     };
   },
 

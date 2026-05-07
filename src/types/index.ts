@@ -9,7 +9,24 @@ export interface UserProfile {
   is_verified: boolean;
   is_private: boolean;
   role: 'user' | 'super_admin';
+  city?: string;
+  category?: string;
+  verification_status?: 'none' | 'pending' | 'verified' | 'rejected';
+  verification_id_url?: string;
+  rating?: number;
+  reviews_count?: number;
   created_at: string;
+}
+
+export interface Review {
+  id: string;
+  post_id?: string;
+  target_user_id: string;
+  author_id: string;
+  rating: number;
+  comment: string;
+  created_at: string;
+  author?: UserProfile;
 }
 
 export interface MediaItem {
