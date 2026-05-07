@@ -113,12 +113,12 @@ export default function AdminPage() {
     setConfirmDelete({ type: 'media', id: mediaId, title: '¿Eliminar contenido?' });
   };
 
-  const handleBroadcast = async (title: string, content: string) => {
+  const handleBroadcast = async (title: string, content: string, type: string, priority: string) => {
     if (!profile) return;
     setIsBroadcasting(true);
     setBroadcastStatus(null);
     try {
-      await adminService.broadcastMessage(title, content, profile.id);
+      await adminService.broadcastMessage(title, content, profile.id, type, priority);
       setBroadcastStatus({ type: 'success', message: 'Comunicado enviado con éxito a todos los usuarios.' });
     } catch (err) {
       console.error('Error broadcasting message:', err);

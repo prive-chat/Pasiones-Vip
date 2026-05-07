@@ -131,11 +131,13 @@ export const adminService = {
     return data;
   },
 
-  async broadcastMessage(title: string, content: string, senderId: string) {
+  async broadcastMessage(title: string, content: string, senderId: string, type: string = 'info', priority: string = 'normal') {
     const { error } = await supabase.rpc('broadcast_global_message', {
       p_title: title,
       p_content: content,
-      p_sender_id: senderId
+      p_sender_id: senderId,
+      p_type: type,
+      p_priority: priority
     });
 
     if (error) throw error;

@@ -539,11 +539,29 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-CREATE OR REPLACE FUNCTION public.broadcast_global_message(p_title TEXT, p_content TEXT, p_sender_id UUID)
+CREATE OR REPLACE FUNCTION public.broadcast_global_message(
+  p_title TEXT, 
+  p_content TEXT, 
+  p_sender_id UUID,
+  p_type TEXT DEFAULT 'info',
+  p_priority TEXT DEFAULT 'normal'
+)
 RETURNS VOID AS $$
 BEGIN
   INSERT INTO public.notifications (user_id, sender_id, type, title, content, link)
-  SELECT id, p_sender_id, 'system', p_title, p_content, '/' FROM public.profiles;
+  SELECT 
+    id, 
+    p_sender_id, 
+    'system', 
+    CASE 
+      WHEN p_priority = 'high' THEN '🚨 [URGENTE] ' || p_title
+      WHEN p_type = 'alert' THEN '⚠️ [ALERTA] ' || p_title
+      WHEN p_type = 'maint' THEN '🛠️ [MANTENIMIENTO] ' || p_title
+      ELSE '📢 ' || p_title
+    END, 
+    p_content, 
+    '/' 
+  FROM public.profiles;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
