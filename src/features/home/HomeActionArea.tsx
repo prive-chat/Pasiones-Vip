@@ -28,7 +28,7 @@ export function HomeActionArea({
         </div>
 
         {/* Right Slot: Primarily for actions or filters (extensible) */}
-        <div className="flex flex-wrap items-center gap-3 empty:hidden">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3 empty:hidden w-full sm:w-auto">
           {rightContent}
         </div>
       </div>

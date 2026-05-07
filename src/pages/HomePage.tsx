@@ -49,19 +49,19 @@ export default function HomePage() {
               <Button
                 onClick={() => setView(view === 'users' ? 'feed' : 'users')}
                 variant={view === 'users' ? 'outline' : 'secondary'}
-                className="h-12 px-6 rounded-2xl font-black uppercase tracking-widest text-[10px] italic"
+                className="h-12 px-3 sm:px-6 w-full sm:w-auto rounded-2xl font-black uppercase tracking-widest text-[9px] sm:text-[10px] italic"
               >
-                <Users className={cn("mr-2 h-4 w-4", view === 'users' ? "text-primary-500" : "text-white/40")} />
-                {view === 'users' ? 'Volver al Feed' : 'Directorio de Usuarios'}
+                <Users className={cn("mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4", view === 'users' ? "text-primary-500" : "text-white/40")} />
+                {view === 'users' ? 'Volver' : 'Directorio'}
               </Button>
               {profile?.is_verified && (
                 <Button
                   onClick={() => setActiveModal('upload')}
                   variant="primary"
-                  className="h-12 px-6 rounded-2xl font-black uppercase tracking-widest text-[10px] italic shadow-xl shadow-primary-600/20"
+                  className="h-12 px-3 sm:px-6 w-full sm:w-auto rounded-2xl font-black uppercase tracking-widest text-[9px] sm:text-[10px] italic shadow-xl shadow-primary-600/20"
                 >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Publicar Contenido
+                  <Plus className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  Publicar
                 </Button>
               )}
             </>
