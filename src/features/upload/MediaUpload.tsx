@@ -103,7 +103,7 @@ export default function MediaUpload({ onUploadComplete }: MediaUploadProps) {
     try {
       await mediaService.uploadMedia(
         user.id,
-        file as File, // Blob is accepted by storage.upload
+        file, 
         file.type.startsWith('video') ? 'video' : 'image',
         caption,
         (progress) => {

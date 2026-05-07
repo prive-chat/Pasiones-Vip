@@ -253,7 +253,7 @@ export const mediaService = {
 
   async uploadMedia(
     userId: string, 
-    file: File, 
+    file: File | Blob, 
     type: 'image' | 'video', 
     caption: string | null,
     onProgress?: (progress: number) => void
@@ -267,7 +267,7 @@ export const mediaService = {
       }
     }
 
-    const fileExt = file.name.split('.').pop();
+    const fileExt = (file as File).name?.split('.').pop() || (type === 'video' ? 'mp4' : 'jpg');
     const fileName = `${userId}/${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
     
     const { error: uploadError } = await supabase.storage

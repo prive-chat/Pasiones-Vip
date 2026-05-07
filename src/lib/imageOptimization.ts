@@ -17,7 +17,7 @@ export interface OptimizationOptions {
  * @returns Un Blob con la imagen optimizada listo para subir.
  */
 export const optimizeImage = async (
-  file: File,
+  file: File | Blob,
   options: OptimizationOptions = { maxWidth: 1200, maxHeight: 1200, quality: 0.8, format: 'image/jpeg' }
 ): Promise<Blob> => {
   // Si no es una imagen, devolvemos el archivo original
@@ -100,7 +100,7 @@ export const optimizeImage = async (
 /**
  * Valida si un archivo cumple con los requisitos de tipo y tamaño máximo.
  */
-export const validateFile = (file: File, allowedTypes: string[], maxMB: number = 5): { valid: boolean; error?: string } => {
+export const validateFile = (file: File | Blob, allowedTypes: string[], maxMB: number = 5): { valid: boolean; error?: string } => {
   if (!allowedTypes.includes(file.type)) {
     return { valid: false, error: 'Formato de archivo no permitido.' };
   }
