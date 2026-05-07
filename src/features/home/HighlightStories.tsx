@@ -78,7 +78,16 @@ export function HighlightStories() {
               className="relative p-1 rounded-[2rem] bg-gradient-to-br from-primary-600 to-primary-900 ring-2 ring-primary-500 shadow-[0_0_20px_rgba(230,0,0,0.3)] group-hover/item:scale-105 transition-all duration-500"
             >
               <div className="h-20 w-20 rounded-[1.8rem] overflow-hidden bg-black">
-                <OptimizedImage src={story.profiles?.avatar_url || ''} alt="" className="w-full h-full object-cover" />
+                {story.media_type === 'video' ? (
+                  <video 
+                    src={story.media_url + '#t=0.1'} 
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                  />
+                ) : (
+                  <OptimizedImage src={story.media_url} alt="" className="w-full h-full object-cover" />
+                )}
               </div>
               <div className="absolute -bottom-1 -right-1 rounded-full bg-primary-600 p-0.5 border-2 border-black shadow-xl">
                 <BadgeCheck size={14} className="text-white" />
