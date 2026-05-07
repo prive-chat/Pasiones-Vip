@@ -67,5 +67,28 @@ export const storyService = {
 
     if (error) throw error;
     return data as Story[];
+  },
+
+  async deleteStory(storyId: string, mediaUrl: string) {
+    // 1. Eliminar de la base de datos
+    const { error: dbError } = await supabase
+      .from('stories')
+      .delete()
+      .eq('id', storyId);
+
+    if (dbError) throw dbError;
+
+    // 2. Intentar eliminar del storage (opcional, si falla no importa tanto)
+    try {
+      const fileName = mediaUrl.split('/').pop();
+      const userId = mediaUrl.split('media/')[1]?.split('/')[0];
+      if (fileName && userId) {
+        await supabase.storage
+          .from('media')
+          .remove([`${userId}/stories/${fileName}`]);
+      }
+    } catch (e) {
+      console.warn('Could not delete story media from storage', e);
+    }
   }
 };
