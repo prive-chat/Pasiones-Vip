@@ -77,16 +77,21 @@ export function HighlightStories() {
               transition={{ delay: idx * 0.05 }}
               className="relative p-1 rounded-[2rem] bg-gradient-to-br from-primary-600 to-primary-900 ring-2 ring-primary-500 shadow-[0_0_20px_rgba(230,0,0,0.3)] group-hover/item:scale-105 transition-all duration-500"
             >
-              <div className="h-20 w-20 rounded-[1.8rem] overflow-hidden bg-black">
+              <div className="h-20 w-20 rounded-[1.8rem] overflow-hidden bg-black flex items-center justify-center">
                 {story.media_type === 'video' ? (
                   <video 
                     src={story.media_url + '#t=0.1'} 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover min-w-full min-h-full"
                     muted
                     playsInline
                   />
                 ) : (
-                  <OptimizedImage src={story.media_url} alt="" className="w-full h-full object-cover" />
+                  <OptimizedImage 
+                    src={story.media_url} 
+                    alt="" 
+                    className="w-full h-full object-cover" 
+                    containerClassName="w-full h-full"
+                  />
                 )}
               </div>
               <div className="absolute -bottom-1 -right-1 rounded-full bg-primary-600 p-0.5 border-2 border-black shadow-xl">
