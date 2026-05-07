@@ -185,6 +185,16 @@ CREATE TABLE IF NOT EXISTS public.global_config (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
+-- N. HISTORIAS (STORIES) - EFÍMERAS (24H)
+CREATE TABLE IF NOT EXISTS public.stories (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  media_url TEXT NOT NULL,
+  media_type TEXT CHECK (media_type IN ('image', 'video')) NOT NULL,
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
 -- ===============================================================
 -- 4. SEGURIDAD RLS Y AYUDANTES
 -- ===============================================================
@@ -202,6 +212,7 @@ ALTER TABLE public.ads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ad_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.global_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.stories ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION public.is_super_admin()
 RETURNS BOOLEAN AS $$
@@ -324,6 +335,22 @@ CREATE POLICY "Cualquiera ve config publica" ON public.global_config FOR SELECT 
 
 DROP POLICY IF EXISTS "Admins gestionan config global" ON public.global_config;
 CREATE POLICY "Admins gestionan config global" ON public.global_config FOR ALL USING (public.is_super_admin());
+
+-- STORIES
+DROP POLICY IF EXISTS "Historias visibles por todos" ON public.stories;
+CREATE POLICY "Historias visibles por todos" ON public.stories FOR SELECT 
+USING (auth.role() = 'authenticated' AND expires_at > NOW());
+
+DROP POLICY IF EXISTS "Usuarios verificados suben historias" ON public.stories;
+CREATE POLICY "Usuarios verificados suben historias" ON public.stories FOR INSERT 
+WITH CHECK (
+  auth.uid() = user_id AND 
+  EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_verified = TRUE)
+);
+
+DROP POLICY IF EXISTS "Dueño o Admin eliminan historias" ON public.stories;
+CREATE POLICY "Dueño o Admin eliminan historias" ON public.stories FOR DELETE 
+USING (auth.uid() = user_id OR public.is_super_admin());
 
 -- ===============================================================
 -- 6. POLÍTICAS DE STORAGE
@@ -631,7 +658,7 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
         CREATE PUBLICATION supabase_realtime;
     END IF;
-    ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications, public.messages, public.profiles, public.media;
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications, public.messages, public.profiles, public.media, public.stories;
 EXCEPTION WHEN others THEN NULL;
 END $$;
 
