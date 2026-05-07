@@ -6,7 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../components/ui/Card';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Camera, Check, AlertCircle, ShieldCheck, Mail, Calendar, Bell, BellOff, Trash2 } from 'lucide-react';
+import { User, Camera, Check, AlertCircle, ShieldCheck, Mail, Calendar, Bell, BellOff, Trash2, Key, Lock } from 'lucide-react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { profileService } from '../services/profileService';
 import { optimizeImage } from '../lib/imageOptimization';
@@ -29,6 +29,12 @@ export default function SettingsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  
+  // Password change state
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     if (profile) {
@@ -217,6 +223,40 @@ export default function SettingsPage() {
       setDeleteError(error.message);
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    if (newPassword.length < 6) {
+      setPasswordMessage({ type: 'error', text: 'La contraseña debe tener al menos 6 caracteres.' });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({ type: 'error', text: 'Las contraseñas no coinciden.' });
+      return;
+    }
+
+    setPasswordLoading(true);
+    setPasswordMessage(null);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      setPasswordMessage({ type: 'success', text: 'Contraseña actualizada correctamente' });
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      setPasswordMessage({ type: 'error', text: error.message });
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -493,30 +533,86 @@ export default function SettingsPage() {
 
           <div className="mt-8">
             <h3 className="text-sm font-bold text-white mb-4 px-1">Seguridad</h3>
-            <Card className="border-red-500/20 bg-red-500/5 glass-card">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-bold text-red-400">Cerrar Sesión en otros dispositivos</h4>
-                    <p className="text-sm text-red-400/60">Esto desconectará tu cuenta de todos los navegadores activos.</p>
+            
+            <div className="space-y-4">
+              <Card className="glass-card border-none">
+                <CardHeader>
+                  <CardTitle className="text-base font-bold text-white flex items-center">
+                    <Key size={18} className="mr-2 text-primary-400" />
+                    Actualizar Contraseña
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleUpdatePassword} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Input
+                        type="password"
+                        label="Nueva Contraseña"
+                        placeholder="Mínimo 6 caracteres"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        variant="glass"
+                        required
+                      />
+                      <Input
+                        type="password"
+                        label="Confirmar Contraseña"
+                        placeholder="Repite la contraseña"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        variant="glass"
+                        required
+                      />
+                    </div>
+
+                    <AnimatePresence>
+                      {passwordMessage && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className={`flex items-center space-x-2 rounded-lg p-3 text-sm ${
+                            passwordMessage.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                          }`}
+                        >
+                          {passwordMessage.type === 'success' ? <Check size={18} /> : <AlertCircle size={18} />}
+                          <span>{passwordMessage.text}</span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <Button type="submit" className="w-full sm:w-auto" isLoading={passwordLoading}>
+                      Actualizar Contraseña
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              <Card className="border-red-500/20 bg-red-500/5 glass-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-red-400">Cerrar Sesión en otros dispositivos</h4>
+                      <p className="text-sm text-red-400/60">Esto desconectará tu cuenta de todos los navegadores activos.</p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                      onClick={async () => {
+                        try {
+                          await supabase.auth.signOut({ scope: 'others' });
+                          setMessage({ type: 'success', text: 'Sesiones cerradas en otros dispositivos' });
+                        } catch (error: any) {
+                          setMessage({ type: 'error', text: error.message });
+                        }
+                      }}
+                    >
+                      Desconectar otros
+                    </Button>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    className="border-red-500/30 text-red-400 hover:bg-red-500/10"
-                    onClick={async () => {
-                      try {
-                        await supabase.auth.signOut({ scope: 'others' });
-                        setMessage({ type: 'success', text: 'Sesiones cerradas en otros dispositivos' });
-                      } catch (error: any) {
-                        setMessage({ type: 'error', text: error.message });
-                      }
-                    }}
-                  >
-                    Desconectar otros
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           <div className="mt-12 pt-8 border-t border-white/10">
