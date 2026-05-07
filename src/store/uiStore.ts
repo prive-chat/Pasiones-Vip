@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { UserProfile } from '../types';
 
-export type ModalType = 'upload' | 'stats' | 'ad' | 'broadcast' | 'confirm' | null;
+export type ModalType = 'upload' | 'stats' | 'ad' | 'broadcast' | 'confirm' | 'story_upload' | 'story_view' | null;
 
 interface UIStore {
   activeModal: ModalType;

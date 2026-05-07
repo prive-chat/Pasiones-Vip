@@ -5,6 +5,8 @@ import { X } from 'lucide-react';
 import MediaUpload from '@/src/features/upload/MediaUpload';
 import StatsModal from '@/src/components/layout/StatsModal';
 import AdModal from '@/src/components/admin/AdModal';
+import StoryUploadModal from '@/src/features/stories/StoryUploadModal';
+import StoryViewer from '@/src/features/stories/StoryViewer';
 
 export default function ModalCenter() {
   const { activeModal, modalData, closeModal } = useUIStore();
@@ -19,6 +21,10 @@ export default function ModalCenter() {
         return <StatsModal type={modalData?.type} userId={modalData?.userId} onClose={closeModal} />;
       case 'ad':
         return <AdModal ad={modalData} onClose={closeModal} onSuccess={modalData?.onSuccess} />;
+      case 'story_upload':
+        return <StoryUploadModal onComplete={closeModal} />;
+      case 'story_view':
+        return <StoryViewer stories={modalData?.stories} initialIndex={modalData?.index} onClose={closeModal} />;
       default:
         return null;
     }
@@ -29,9 +35,17 @@ export default function ModalCenter() {
       case 'upload': return 'Subir Contenido';
       case 'stats': return 'Estadísticas';
       case 'ad': return modalData ? 'Editar Anuncio' : 'Nuevo Anuncio';
+      case 'story_upload': return 'Publicar Historia VIP';
+      case 'story_view': return ''; // Viewer doesn't need header
       default: return '';
     }
   };
+
+  const isViewer = activeModal === 'story_view';
+
+  if (isViewer) {
+    return <StoryViewer stories={modalData?.stories} initialIndex={modalData?.index} onClose={closeModal} />;
+  }
 
   return (
     <AnimatePresence>
