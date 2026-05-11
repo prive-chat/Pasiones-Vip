@@ -20,7 +20,7 @@ import {
   Clock,
   Camera,
   Star,
-  Coins,
+  DollarSign,
   ShieldCheck,
   MapPin,
   Tag,
@@ -337,13 +337,15 @@ export default function UserProfilePage() {
                     <MessageSquare size={20} />
                   </Button>
                 </Link>
-                <Button 
-                  variant="glass" 
-                  className="h-11 px-4 bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white"
-                  onClick={() => setIsTipModalOpen(true)}
-                >
-                  <Coins size={20} />
-                </Button>
+                {profile.is_verified && (
+                  <Button 
+                    variant="glass" 
+                    className="h-11 px-4 bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white"
+                    onClick={() => setIsTipModalOpen(true)}
+                  >
+                    <DollarSign size={20} />
+                  </Button>
+                )}
               </>
             )}
           </div>
@@ -575,7 +577,7 @@ export default function UserProfilePage() {
               className="w-full max-w-sm overflow-hidden rounded-[3rem] p-8 glass-card border border-amber-500/20 shadow-[0_0_50px_rgba(245,158,11,0.1)]"
             >
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-500 mb-6 mx-auto">
-                <Coins size={32} />
+                <DollarSign size={32} />
               </div>
               <h3 className="text-2xl font-black text-white text-center italic uppercase mb-2">Enviar Propina</h3>
               <p className="text-white/40 text-center text-sm mb-8 italic">Apoya a {profile.full_name?.split(' ')[0]} por su contenido.</p>
@@ -586,11 +588,11 @@ export default function UserProfilePage() {
                     key={amount}
                     className="py-3 px-2 rounded-2xl bg-white/5 border border-white/10 text-white font-black hover:bg-amber-500 hover:border-amber-400 hover:scale-105 transition-all duration-300"
                     onClick={() => {
-                      alert(`Redirigiendo a pasarela para propina de ${amount}€`);
+                      alert(`Redirigiendo a pasarela para propina de ${amount}$`);
                       setIsTipModalOpen(false);
                     }}
                   >
-                    {amount}€
+                    {amount}$
                   </button>
                 ))}
               </div>
