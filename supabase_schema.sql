@@ -30,6 +30,12 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     is_verified BOOLEAN DEFAULT FALSE,
     is_private BOOLEAN DEFAULT FALSE,
     role TEXT DEFAULT 'user' CHECK (role IN ('user', 'super_admin')),
+    city TEXT,
+    category TEXT,
+    verification_status TEXT DEFAULT 'none' CHECK (verification_status IN ('none', 'pending', 'verified', 'rejected')),
+    verification_id_url TEXT,
+    rating NUMERIC(3,2) DEFAULT 0,
+    reviews_count INTEGER DEFAULT 0,
     search_vector tsvector,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
@@ -675,6 +681,12 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'bio') THEN ALTER TABLE public.profiles ADD COLUMN bio TEXT; END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'is_verified') THEN ALTER TABLE public.profiles ADD COLUMN is_verified BOOLEAN DEFAULT FALSE; END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'role') THEN ALTER TABLE public.profiles ADD COLUMN role TEXT DEFAULT 'user'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'city') THEN ALTER TABLE public.profiles ADD COLUMN city TEXT; END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'category') THEN ALTER TABLE public.profiles ADD COLUMN category TEXT; END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'verification_status') THEN ALTER TABLE public.profiles ADD COLUMN verification_status TEXT DEFAULT 'none'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'verification_id_url') THEN ALTER TABLE public.profiles ADD COLUMN verification_id_url TEXT; END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'rating') THEN ALTER TABLE public.profiles ADD COLUMN rating NUMERIC(3,2) DEFAULT 0; END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'reviews_count') THEN ALTER TABLE public.profiles ADD COLUMN reviews_count INTEGER DEFAULT 0; END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'search_vector') THEN ALTER TABLE public.profiles ADD COLUMN search_vector tsvector; END IF;
 
   -- Media

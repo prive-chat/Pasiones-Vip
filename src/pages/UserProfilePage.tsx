@@ -41,6 +41,7 @@ import { Loader2 } from 'lucide-react';
 import { ProfileSkeleton } from '@/src/components/Skeletons';
 import { useUserStats } from '@/src/hooks/useUserStats';
 import { Input } from '@/src/components/ui/Input';
+import { useNotificationStore } from '@/src/store/notificationStore';
 
 export default function UserProfilePage() {
   const { userId } = useParams<{ userId: string }>();
@@ -55,6 +56,7 @@ export default function UserProfilePage() {
   const { user: currentUser } = useAuth();
   const isMe = currentUser?.id === userId;
   const observerTarget = useRef(null);
+  const addToast = useNotificationStore((state) => state.addToast);
 
   const [activeTab, setActiveTab] = useState<'posts' | 'reviews' | 'about'>('posts');
   const [isTipModalOpen, setIsTipModalOpen] = useState(false);
@@ -588,7 +590,11 @@ export default function UserProfilePage() {
                     key={amount}
                     className="py-3 px-2 rounded-2xl bg-white/5 border border-white/10 text-white font-black hover:bg-amber-500 hover:border-amber-400 hover:scale-105 transition-all duration-300"
                     onClick={() => {
-                      alert(`Redirigiendo a pasarela para propina de ${amount}$`);
+                      addToast({
+                        type: 'success',
+                        message: 'Procesando Propina',
+                        description: `Redirigiendo a pasarela exclusiva para propina de ${amount}$.`
+                      });
                       setIsTipModalOpen(false);
                     }}
                   >
@@ -600,7 +606,14 @@ export default function UserProfilePage() {
               <div className="flex flex-col space-y-3">
                 <Button 
                   className="w-full bg-amber-500 hover:bg-amber-600 text-black font-black uppercase"
-                  onClick={() => setIsTipModalOpen(false)}
+                  onClick={() => {
+                    addToast({
+                      type: 'info',
+                      message: 'Propina Personalizada',
+                      description: 'Para montos e interacciones premium personalizadas, contacta directamente a través de Mensaje Privado.'
+                    });
+                    setIsTipModalOpen(false);
+                  }}
                 >
                   Personalizado
                 </Button>

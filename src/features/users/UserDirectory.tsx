@@ -57,6 +57,72 @@ export default function UserDirectory() {
             <SlidersHorizontal size={18} className="mr-2" />
             Filtros
           </Button>
+          {(search || city || category) && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setSearch('');
+                setCity('');
+                setCategory('');
+              }}
+              className="text-primary-500 hover:text-primary-400 text-xs font-black uppercase tracking-wider"
+            >
+              Limpiar
+            </Button>
+          )}
+        </div>
+
+        {/* Quick Suggestion Chips */}
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
+            <span className="text-[9px] font-black uppercase tracking-wider text-white/40 whitespace-nowrap mr-2 flex items-center">
+              <MapPin size={10} className="mr-1 text-primary-500" /> Ciudades:
+            </span>
+            {['Madrid', 'Barcelona', 'Ibiza', 'Marbella', 'Valencia', 'Sevilla', 'Mallorca'].map((popCity) => {
+              const active = city.toLowerCase() === popCity.toLowerCase();
+              return (
+                <button
+                  key={popCity}
+                  onClick={() => {
+                    setCity(active ? '' : popCity);
+                    setShowFilters(true);
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border whitespace-nowrap ${
+                    active
+                      ? 'bg-primary-600 border-primary-500 text-white shadow-lg shadow-primary-600/20'
+                      : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  {popCity}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
+            <span className="text-[9px] font-black uppercase tracking-wider text-white/40 whitespace-nowrap mr-2 flex items-center">
+              <Tag size={10} className="mr-1 text-primary-500" /> Categorías:
+            </span>
+            {['Escort', 'Masajes', 'Trans', 'Acompañante', 'BDSM', 'Fetish', 'VIP'].map((popCat) => {
+              const active = category.toLowerCase() === popCat.toLowerCase();
+              return (
+                <button
+                  key={popCat}
+                  onClick={() => {
+                    setCategory(active ? '' : popCat);
+                    setShowFilters(true);
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border whitespace-nowrap ${
+                    active
+                      ? 'bg-primary-600 border-primary-500 text-white shadow-lg shadow-primary-600/20'
+                      : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  {popCat}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <AnimatePresence>
