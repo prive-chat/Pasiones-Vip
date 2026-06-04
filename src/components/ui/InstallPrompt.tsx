@@ -78,7 +78,7 @@ export function InstallPrompt() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center shadow-lg shadow-passion-red/20 overflow-hidden neon-glow p-0">
-                  <img src="/favicon-32.png" alt="Logo" className="h-8 w-8 object-contain" />
+                  <img src="/favicon-32.png?v=logo-v2" alt="Logo" className="h-8 w-8 object-contain" />
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-white italic uppercase tracking-tighter">Pasiones Vip</h3>
