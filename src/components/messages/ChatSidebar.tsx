@@ -14,6 +14,7 @@ interface ChatSidebarProps {
   onSearchChange: (val: string) => void;
   onConversationSelect: (userId: string) => void;
   isSearchingUsers?: boolean;
+  onlineUserIds?: string[];
 }
 
 export const ChatSidebar: FC<ChatSidebarProps> = ({
@@ -23,7 +24,8 @@ export const ChatSidebar: FC<ChatSidebarProps> = ({
   searchTerm,
   onSearchChange,
   onConversationSelect,
-  isSearchingUsers
+  isSearchingUsers,
+  onlineUserIds = []
 }) => {
   const filteredConversations = conversations.filter(conv => {
     const profile = conv.profile;
@@ -109,9 +111,11 @@ export const ChatSidebar: FC<ChatSidebarProps> = ({
                             </div>
                           )}
                         </div>
-                        <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-zinc-900 flex items-center justify-center">
-                          <div className="h-2.5 w-2.5 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)] border border-black" />
-                        </div>
+                        {onlineUserIds.includes(conv.userId) && (
+                          <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-zinc-950 flex items-center justify-center">
+                            <div className="h-2.5 w-2.5 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)] border border-transparent animate-pulse" />
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex-1 min-w-0">
@@ -171,9 +175,15 @@ export const ChatSidebar: FC<ChatSidebarProps> = ({
                           profile?.full_name?.[0] || 'U'
                         )}
                       </div>
-                      <div className="absolute -bottom-1 -right-1 rounded-full bg-zinc-700 p-0.5 ring-2 ring-black">
-                        <UserPlus size={10} className="text-white/60" />
-                      </div>
+                      {onlineUserIds.includes(profile.id) ? (
+                        <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-zinc-950 flex items-center justify-center">
+                          <div className="h-2.5 w-2.5 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)] border border-transparent animate-pulse" />
+                        </div>
+                      ) : (
+                        <div className="absolute -bottom-1 -right-1 rounded-full bg-zinc-700 p-0.5 ring-2 ring-black">
+                          <UserPlus size={10} className="text-white/60" />
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-1 mb-0.5">

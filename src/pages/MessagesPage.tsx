@@ -161,7 +161,42 @@ export default function MessagesPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
+  const roomChannelRef = useRef<any>(null);
 
+  // 1. Global Real-time Online Tracking
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const globalChannel = supabase.channel('global_online_presence', {
+      config: {
+        presence: {
+          key: currentUser.id,
+        },
+      },
+    });
+
+    globalChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = globalChannel.presenceState();
+        const activeIds = Object.keys(state);
+        setOnlineUserIds(activeIds);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await globalChannel.track({
+            user_id: currentUser.id,
+            active_at: new Date().toISOString()
+          });
+        }
+      });
+
+    return () => {
+      globalChannel.unsubscribe();
+    };
+  }, [currentUser?.id]);
+
+  // 2. Chat Conversation-specific Tracking & Postgres listeners
   useEffect(() => {
     if (targetUserId && currentUser) {
       // Mark messages as read when opening the chat
@@ -182,14 +217,16 @@ export default function MessagesPage() {
         })
         .catch(err => console.error('Error marking notifications as read:', err));
 
-      // Real-time subscriptions
-      const channel = supabase.channel(`chat_${targetUserId}_${currentUser.id}`, {
+      // Shared room name by sorting participant IDs
+      const sortedIds = [currentUser.id, targetUserId].sort().join('-');
+      const channel = supabase.channel(`chat_room_${sortedIds}`, {
         config: {
           presence: {
             key: currentUser.id,
           },
         },
       });
+      roomChannelRef.current = channel;
 
       channel
         .on('presence', { event: 'sync' }, () => {
@@ -244,25 +281,24 @@ export default function MessagesPage() {
 
       return () => {
         channel.unsubscribe();
+        roomChannelRef.current = null;
       };
     }
   }, [targetUserId, currentUser, queryClient]);
 
   const handleTyping = () => {
-    if (!currentUser || !targetUserId) return;
+    if (!currentUser || !targetUserId || !roomChannelRef.current) return;
 
     if (!isTyping) {
       setIsTyping(true);
-      const channel = supabase.channel(`chat_${targetUserId}_${currentUser.id}`);
-      channel.track({ user_id: currentUser.id, is_typing: true });
+      roomChannelRef.current.track({ user_id: currentUser.id, is_typing: true });
     }
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
-      const channel = supabase.channel(`chat_${targetUserId}_${currentUser.id}`);
-      channel.track({ user_id: currentUser.id, is_typing: false });
+      roomChannelRef.current?.track({ user_id: currentUser.id, is_typing: false });
     }, 3000);
   };
 
@@ -273,8 +309,7 @@ export default function MessagesPage() {
     // Stop typing indicator
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     setIsTyping(false);
-    const channel = supabase.channel(`chat_${targetUserId}_${currentUser.id}`);
-    channel.track({ user_id: currentUser.id, is_typing: false });
+    roomChannelRef.current?.track({ user_id: currentUser.id, is_typing: false });
 
     let content = newMessage;
     if (refPost) {
@@ -324,6 +359,7 @@ export default function MessagesPage() {
             onSearchChange={setSearchTerm}
             onConversationSelect={(id) => navigate(`/messages?to=${id}`)}
             isSearchingUsers={searchMutation.isPending}
+            onlineUserIds={onlineUserIds}
           />
         </div>
 
@@ -354,6 +390,7 @@ export default function MessagesPage() {
           onDeleteMessage={(id, isMe) => deleteMessageMutation.mutate({ id, isMe })}
           onReactMessage={(id, emoji) => reactMutation.mutate({ id, emoji })}
           onMessageVisible={(id) => markReadMutation.mutate(id)}
+          isOnline={targetUserId ? onlineUserIds.includes(targetUserId) : false}
         />
       </div>
 

@@ -37,6 +37,7 @@ interface ChatWindowProps {
   onDeleteMessage?: (id: string, isMe: boolean) => void;
   onReactMessage?: (id: string, emoji: string) => void;
   onMessageVisible?: (id: string) => void;
+  isOnline?: boolean;
 }
 
 export const ChatWindow: FC<ChatWindowProps> = ({
@@ -62,7 +63,8 @@ export const ChatWindow: FC<ChatWindowProps> = ({
   isTyping,
   onDeleteMessage,
   onReactMessage,
-  onMessageVisible
+  onMessageVisible,
+  isOnline = false
 }) => {
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -155,6 +157,11 @@ export const ChatWindow: FC<ChatWindowProps> = ({
                 </div>
                 {isTyping ? (
                   <p className="text-[10px] text-primary-400 font-medium animate-pulse">Escribiendo...</p>
+                ) : isOnline ? (
+                  <p className="text-[10px] text-green-400 font-extrabold flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)] animate-pulse" />
+                    <span>EN LÍNEA</span>
+                  </p>
                 ) : (
                   <p className="text-[10px] text-white/50">Mensajería Segura Pasiones Vip</p>
                 )}
