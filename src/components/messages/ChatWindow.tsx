@@ -199,11 +199,33 @@ export const ChatWindow: FC<ChatWindowProps> = ({
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 overflow-visible p-0 bg-transparent flex flex-col">
+      <CardContent className="flex-1 overflow-visible p-0 bg-transparent flex flex-col justify-center">
         {messages.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-white/20 p-4">
-            <MessageSquare size={48} className="mb-2 opacity-20" />
-            <p className="text-sm">No hay mensajes todavía. ¡Di hola!</p>
+          <div className="flex flex-col items-center justify-center text-white/40 p-6 text-center max-w-sm mx-auto w-full">
+            <div className="h-16 w-16 rounded-3xl bg-primary-600/10 border border-primary-500/20 flex items-center justify-center mb-4 text-primary-400">
+              <MessageSquare size={28} />
+            </div>
+            <p className="font-extrabold text-white text-base mb-1">¡Inicia la Conversación Segura!</p>
+            <p className="text-xs text-white/50 mb-6 leading-relaxed">Tu chat está protegido y es estrictamente confidencial.</p>
+            
+            <div className="space-y-2 w-full">
+              <span className="text-[9px] font-black uppercase tracking-widest text-white/30 text-left block">Sugerencias Rápidas:</span>
+              {[
+                "¡Hola! ¿Cómo estás? Me encanta tu perfil. 😊",
+                "Buenas, ¿tienes disponibilidad para esta semana? 📅",
+                "Hola, me gustaría saber excelentes detalles sobre ti. ✨"
+              ].map((msgText) => (
+                <button
+                  key={msgText}
+                  type="button"
+                  onClick={() => onNewMessageChange(msgText)}
+                  className="w-full p-3 text-left bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-white/80 hover:text-white rounded-xl transition-all duration-300 font-bold active:scale-95 leading-snug cursor-pointer flex justify-between items-center group"
+                >
+                  <span className="truncate pr-4">{msgText}</span>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">Usar</span>
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           <Virtuoso
