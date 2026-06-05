@@ -1,5 +1,6 @@
 import Jimp from 'jimp';
 import path from 'path';
+import fs from 'fs';
 
 async function processIcon() {
   try {
@@ -91,7 +92,11 @@ async function processIcon() {
       }
       
       const outputPath = path.join('public', asset.name);
-      await resizedImage.writeAsync(outputPath);
+      
+      // Prevent UTF-8 binary corruption by writing raw Buffer via native fs.writeFileSync
+      const buffer = await resizedImage.getBufferAsync(Jimp.MIME_PNG);
+      fs.writeFileSync(outputPath, buffer);
+      
       console.log(`Successfully wrote: ${outputPath}`);
     }
     
