@@ -14,11 +14,15 @@ import { AdCard } from '../components/ui/AdCard';
 import UserIdentityBar from '../components/layout/UserIdentityBar';
 import { useQuery } from '@tanstack/react-query';
 import { HighlightStories } from '../features/home/HighlightStories';
+import { AdRatesModal } from '../components/ui/AdRatesModal';
+import { VipInfoModal } from '../components/ui/VipInfoModal';
 
 export default function HomePage() {
   const [view, setView] = useState<'feed' | 'users'>('feed');
   const { profile } = useAuth();
   const setActiveModal = useUIStore((state) => state.setActiveModal);
+  const [isAdRatesOpen, setIsAdRatesOpen] = useState(false);
+  const [isVipInfoOpen, setIsVipInfoOpen] = useState(false);
 
   const { data: ads = [] } = useQuery({
     queryKey: ['active-ads', 'feed'],
@@ -135,10 +139,21 @@ export default function HomePage() {
                     <div className="p-8 rounded-[2.5rem] bg-zinc-950 border border-white/5 shadow-2xl relative overflow-hidden group">
                       <div className="absolute inset-0 bg-gradient-to-br from-primary-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                       
-                      <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-8 flex items-center gap-3">
-                        <Megaphone size={14} className="text-primary-500" />
-                        Espacio Publicitario
-                      </h3>
+                      <div className="flex items-center justify-between mb-8">
+                        <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] flex items-center gap-3">
+                          <Megaphone size={14} className="text-primary-500" />
+                          Espacio Publicitario
+                        </h3>
+                        {ads.length > 0 && (
+                          <button 
+                            type="button"
+                            onClick={() => setIsAdRatesOpen(true)}
+                            className="text-[9px] font-black uppercase text-[#FF4D4D] hover:text-white transition-colors cursor-pointer"
+                          >
+                            Anúnciate
+                          </button>
+                        )}
+                      </div>
                       
                       <div className="space-y-10 relative z-10">
                         {ads.length > 0 ? (
@@ -150,7 +165,7 @@ export default function HomePage() {
                         ) : (
                           <div className="py-16 text-center border-2 border-dashed border-white/5 rounded-[2rem] bg-white/[0.01]">
                             <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] px-8">Tu anuncio podría estar aquí resaltado</p>
-                            <Button variant="ghost" size="sm" className="mt-4 text-[8px] font-black uppercase tracking-widest text-primary-400">Consultar Tarifas</Button>
+                            <Button onClick={() => setIsAdRatesOpen(true)} variant="ghost" size="sm" className="mt-4 text-[8px] font-black uppercase tracking-widest text-[#FF4D4D] cursor-pointer">Consultar Tarifas</Button>
                           </div>
                         )}
                       </div>
@@ -165,7 +180,7 @@ export default function HomePage() {
                       <p className="text-sm text-white/80 leading-relaxed italic relative z-10 font-medium">
                         Disfruta de visibilidad máxima, insignias de verificación y acceso a herramientas exclusivas de promoción.
                       </p>
-                      <Button variant="outline" className="mt-8 w-full border-white/20 bg-white/10 hover:bg-white/20 text-[10px] font-black uppercase tracking-widest italic rounded-xl h-12 relative z-10">
+                      <Button onClick={() => setIsVipInfoOpen(true)} variant="outline" className="mt-8 w-full border-white/20 bg-white/10 hover:bg-white/20 text-[10px] font-black uppercase tracking-widest italic rounded-xl h-12 relative z-10 cursor-pointer">
                         Saber Más
                       </Button>
                     </div>
@@ -176,6 +191,10 @@ export default function HomePage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Interactive Advertising Details and Premium VIP Plans */}
+      <AdRatesModal isOpen={isAdRatesOpen} onClose={() => setIsAdRatesOpen(false)} />
+      <VipInfoModal isOpen={isVipInfoOpen} onClose={() => setIsVipInfoOpen(false)} />
     </div>
   );
 }
