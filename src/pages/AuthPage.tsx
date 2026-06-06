@@ -194,12 +194,31 @@ export default function AuthPage() {
             </form>
           </CardContent>
           <CardFooter className="flex flex-col space-y-2">
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-xs font-bold text-white/40 hover:text-passion-red transition-colors uppercase tracking-widest"
-            >
-              {isLogin ? "¿No tienes cuenta? Regístrate" : '¿Ya tienes cuenta? Inicia sesión'}
-            </button>
+            <div className="text-xs font-bold text-white/40 uppercase tracking-widest text-center flex items-center justify-center gap-1">
+              {isLogin ? (
+                <span>
+                  ¿No tienes cuenta?{' '}
+                  <button
+                    type="button"
+                    onClick={() => setIsLogin(false)}
+                    className="text-passion-red hover:text-white transition-all underline decoration-passion-red/50 hover:decoration-white font-black cursor-pointer px-2.5 py-1 bg-passion-red/10 hover:bg-passion-red/20 border border-passion-red/25 rounded-md shadow-[0_0_15px_rgba(230,0,0,0.1)] hover:shadow-[0_0_20px_rgba(230,0,0,0.35)] ml-1"
+                  >
+                    Regístrate
+                  </button>
+                </span>
+              ) : (
+                <span>
+                  ¿Ya tienes cuenta?{' '}
+                  <button
+                    type="button"
+                    onClick={() => setIsLogin(true)}
+                    className="text-white hover:text-passion-red transition-colors underline decoration-white/30 hover:decoration-passion-red ml-1 font-bold cursor-pointer"
+                  >
+                    Inicia sesión
+                  </button>
+                </span>
+              )}
+            </div>
           </CardFooter>
         </Card>
       </motion.div>
