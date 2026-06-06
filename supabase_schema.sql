@@ -201,6 +201,17 @@ CREATE TABLE IF NOT EXISTS public.stories (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
+-- O. RESEÑAS (REVIEWS)
+CREATE TABLE IF NOT EXISTS public.reviews (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  target_user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  author_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  rating INTEGER CHECK (rating >= 1 AND rating <= 5) NOT NULL,
+  comment TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  CONSTRAINT unique_review_author_target UNIQUE (author_id, target_user_id)
+);
+
 -- ===============================================================
 -- 4. SEGURIDAD RLS Y AYUDANTES
 -- ===============================================================
@@ -219,6 +230,7 @@ ALTER TABLE public.ad_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.global_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.stories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION public.is_super_admin()
 RETURNS BOOLEAN AS $$
@@ -358,6 +370,24 @@ DROP POLICY IF EXISTS "Dueño o Admin eliminan historias" ON public.stories;
 CREATE POLICY "Dueño o Admin eliminan historias" ON public.stories FOR DELETE 
 USING (auth.uid() = user_id OR public.is_super_admin());
 
+-- REVIEWS
+DROP POLICY IF EXISTS "Reseñas visibles por usuarios" ON public.reviews;
+CREATE POLICY "Reseñas visibles por usuarios" ON public.reviews FOR SELECT 
+USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Usuarios pueden crear reseñas" ON public.reviews;
+CREATE POLICY "Usuarios pueden crear reseñas" ON public.reviews FOR INSERT 
+WITH CHECK (auth.uid() = author_id);
+
+DROP POLICY IF EXISTS "Usuarios editan o borran sus propias reseñas" ON public.reviews;
+CREATE POLICY "Usuarios editan o borran sus propias reseñas" ON public.reviews FOR UPDATE 
+USING (auth.uid() = author_id) 
+WITH CHECK (auth.uid() = author_id);
+
+DROP POLICY IF EXISTS "Usuarios eliminan sus propias reseñas" ON public.reviews;
+CREATE POLICY "Usuarios eliminan sus propias reseñas" ON public.reviews FOR DELETE 
+USING (auth.uid() = author_id);
+
 -- ===============================================================
 -- 6. POLÍTICAS DE STORAGE
 -- ===============================================================
@@ -490,6 +520,37 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS tr_profiles_search ON public.profiles;
 CREATE TRIGGER tr_profiles_search BEFORE INSERT OR UPDATE ON public.profiles
 FOR EACH ROW EXECUTE PROCEDURE public.profiles_search_trigger();
+
+-- AUTOMATIZACIÓN DE RESEÑAS / CALIFICACIÓN DE PERFILES
+CREATE OR REPLACE FUNCTION public.handle_review_changes()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Si se inserta o actualiza una reseña
+  IF (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') THEN
+    UPDATE public.profiles
+    SET 
+      reviews_count = (SELECT COUNT(*) FROM public.reviews WHERE target_user_id = NEW.target_user_id),
+      rating = (SELECT ROUND(COALESCE(AVG(rating), 0), 2) FROM public.reviews WHERE target_user_id = NEW.target_user_id)
+    WHERE id = NEW.target_user_id;
+  END IF;
+
+  -- Si se elimina una reseña o se cambia el destinatario (para el antiguo)
+  IF (TG_OP = 'DELETE' OR TG_OP = 'UPDATE') THEN
+    UPDATE public.profiles
+    SET 
+      reviews_count = (SELECT COUNT(*) FROM public.reviews WHERE target_user_id = OLD.target_user_id),
+      rating = (SELECT ROUND(COALESCE(AVG(rating), 0), 2) FROM public.reviews WHERE target_user_id = OLD.target_user_id)
+    WHERE id = OLD.target_user_id;
+  END IF;
+
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+DROP TRIGGER IF EXISTS on_review_changed ON public.reviews;
+CREATE TRIGGER on_review_changed
+  AFTER INSERT OR UPDATE OR DELETE ON public.reviews
+  FOR EACH ROW EXECUTE FUNCTION public.handle_review_changes();
 
 -- ===============================================================
 -- 8. FUNCIONES RPC ADICIONALES

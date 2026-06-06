@@ -9,7 +9,14 @@ export const reviewService = {
       .eq('target_user_id', targetUserId)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      // postgres 42P01/404 means the table doesn't exist yet
+      if (error.code === '42P01' || error.message?.includes('relation "reviews" does not exist')) {
+        console.warn('La tabla "reviews" no existe en Supabase. Ejecuta el archivo "supabase_schema.sql" en la consola SQL de Supabase para crearla.');
+        return [] as Review[];
+      }
+      throw error;
+    }
     return data as Review[];
   },
 
