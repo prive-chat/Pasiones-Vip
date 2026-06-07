@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react';
 import { useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import Navbar from './components/layout/Navbar';
+import BottomNavigation from './components/layout/BottomNavigation';
 import ModalCenter from './components/layout/ModalCenter';
 import ScrollToTop from './components/layout/ScrollToTop';
 import { InstallPrompt } from './components/ui/InstallPrompt';
@@ -59,7 +60,7 @@ export default function App() {
           <Navbar />
           <NotificationManager />
           <ModalCenter />
-          <main>
+          <main className="pb-24 md:pb-0">
             <AnimatePresence mode="wait">
               <Routes location={location} key={location.pathname}>
                 {/* Public Routes */}
@@ -80,6 +81,7 @@ export default function App() {
               </Routes>
             </AnimatePresence>
           </main>
+          <BottomNavigation />
         </Suspense>
       </div>
     </>
