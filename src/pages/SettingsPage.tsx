@@ -6,7 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../components/ui/Card';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Camera, Check, AlertCircle, ShieldCheck, Mail, Calendar, Bell, BellOff, Trash2, Key, Lock, BarChart3, BadgeCheck, MapPin, Tag, UploadCloud } from 'lucide-react';
+import { User, Camera, Check, AlertCircle, ShieldCheck, Mail, Calendar, Bell, BellOff, Trash2, Key, Lock, BarChart3, BadgeCheck, MapPin, Tag, UploadCloud, Smartphone, Download, ExternalLink, Share2 } from 'lucide-react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { profileService } from '../services/profileService';
 import { useUserStats } from '../hooks/useUserStats';
@@ -40,6 +40,58 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // PWA mobile app state
+  const [pwaPrompt, setPwaPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isInIframe, setIsInIframe] = useState(false);
+
+  useEffect(() => {
+    const inIframe = window.self !== window.top;
+    setIsInIframe(inIframe);
+
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    setIsIOS(ios);
+
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+    setIsStandalone(standalone);
+
+    // Grab globally captured prompt if any
+    if ((window as any).deferredPrompt) {
+      setPwaPrompt((window as any).deferredPrompt);
+    }
+
+    const handler = (e: any) => {
+      e.preventDefault();
+      setPwaPrompt(e);
+    };
+
+    const customHandler = (e: any) => {
+      if (e.detail) {
+        setPwaPrompt(e.detail);
+      }
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('pwa-prompt-available', customHandler as EventListener);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('pwa-prompt-available', customHandler as EventListener);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!pwaPrompt) return;
+    pwaPrompt.prompt();
+    const { outcome } = await pwaPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsStandalone(true);
+      setPwaPrompt(null);
+      (window as any).deferredPrompt = null;
+    }
+  };
 
   useEffect(() => {
     if (profile) {
@@ -619,6 +671,78 @@ export default function SettingsPage() {
                       </Button>
                     </div>
                   )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sección de Aplicación Móvil (PWA) */}
+          <div className="mt-8">
+            <h3 className="text-sm font-bold text-white mb-4 px-1 flex items-center gap-2">
+              <Smartphone size={16} className="text-primary-500" />
+              Aplicación Móvil (App PWA)
+            </h3>
+            <Card className="glass-card border-none bg-gradient-to-br from-primary-600/5 to-transparent">
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+                  <div className="space-y-1 flex-1">
+                    <h4 className="font-bold text-white flex items-center gap-2">
+                      Pasiones VIP en tu Celular
+                      {isStandalone && (
+                        <span className="bg-green-500/10 text-green-400 border border-green-500/20 text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full">
+                          App Instalada
+                        </span>
+                      )}
+                    </h4>
+                    <p className="text-sm text-white/60 leading-relaxed">
+                      {isStandalone 
+                        ? 'Estás disfrutando de Pasiones VIP desde la aplicación nativa a pantalla completa y con notificaciones automáticas.'
+                        : isInIframe
+                        ? 'Estás en modo previsualización de AI Studio. Para poder instalar la app oficial, debes abrir la plataforma en una pestaña nueva.'
+                        : isIOS
+                        ? 'Instala una versión móvil optimizada con notificaciones automáticas, cero consumo de almacenamiento y acceso directo en tu pantalla de inicio.'
+                        : pwaPrompt
+                        ? 'Instala el acceso de Pasiones VIP en tu dispositivo para recibir alertas directas, chats instantáneos y un rendimiento optimizado.'
+                        : 'Tu dispositivo ya está listo o no requiere instalación. Si estás en Safari o Chrome, puedes agregar este sitio a la pantalla de inicio manualmente.'}
+                    </p>
+                  </div>
+
+                  <div className="shrink-0 w-full sm:w-auto">
+                    {isStandalone ? (
+                      <div className="flex items-center gap-2 text-green-400 text-xs font-bold bg-green-500/10 border border-green-500/20 px-4 py-2.5 rounded-xl">
+                        <Check size={14} />
+                        ¡Disfrutando de la App!
+                      </div>
+                    ) : isInIframe ? (
+                      <a
+                        href={window.location.origin}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-xs font-bold text-white rounded-xl transition-all shadow-lg shadow-primary-600/10"
+                      >
+                        <ExternalLink size={14} />
+                        Abrir e Instalar App
+                      </a>
+                    ) : isIOS ? (
+                      <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-center sm:text-left">
+                        <p className="text-xs text-white/80 leading-relaxed">
+                          Toca <Share2 size={14} className="inline text-primary-400 mx-1" /> en tu navegador Safari y elige <span className="font-black italic underline text-white">"Añadir a la pantalla de inicio"</span>.
+                        </p>
+                      </div>
+                    ) : pwaPrompt ? (
+                      <Button
+                        onClick={handleInstallApp}
+                        className="w-full sm:w-auto bg-primary-600 hover:bg-primary-500 text-white font-bold px-5 py-2.5 flex items-center justify-center gap-1.5 rounded-xl shadow-lg shadow-primary-600/15"
+                      >
+                        <Download size={14} />
+                        Instalar App
+                      </Button>
+                    ) : (
+                      <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-center sm:text-left text-xs text-white/40">
+                        Usa las opciones de tu navegador para "Añadir a la pantalla de inicio".
+                      </div>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
