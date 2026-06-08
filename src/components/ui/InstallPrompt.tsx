@@ -27,11 +27,21 @@ export function InstallPrompt() {
         setIsVisible(true);
       }
     } else {
-      // Show prompt for iOS if not already installed and not in iframe
-      if (ios && !isStandalone) {
+      // Check if we already have the globally captured prompt from our early-loaded script in index.html
+      const existingPrompt = (window as any).deferredPrompt;
+      if (existingPrompt) {
+        setDeferredPrompt(existingPrompt);
         const hasDismissed = localStorage.getItem('pwa_prompt_dismissed');
         if (!hasDismissed) {
           setIsVisible(true);
+        }
+      } else {
+        // Show prompt for iOS if not already installed and not in iframe
+        if (ios && !isStandalone) {
+          const hasDismissed = localStorage.getItem('pwa_prompt_dismissed');
+          if (!hasDismissed) {
+            setIsVisible(true);
+          }
         }
       }
     }
@@ -43,13 +53,32 @@ export function InstallPrompt() {
       setDeferredPrompt(e);
       // Only show the install prompt if we are NOT inside an iframe (since browser blocks installation in iframes)
       if (!inIframe) {
-        setIsVisible(true);
+        const hasDismissed = localStorage.getItem('pwa_prompt_dismissed');
+        if (!hasDismissed) {
+          setIsVisible(true);
+        }
+      }
+    };
+
+    const customHandler = (e: any) => {
+      if (e.detail) {
+        setDeferredPrompt(e.detail);
+        if (!inIframe) {
+          const hasDismissed = localStorage.getItem('pwa_prompt_dismissed');
+          if (!hasDismissed) {
+            setIsVisible(true);
+          }
+        }
       }
     };
 
     window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('pwa-prompt-available', customHandler as EventListener);
 
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('pwa-prompt-available', customHandler as EventListener);
+    };
   }, []);
 
   const handleInstall = async () => {

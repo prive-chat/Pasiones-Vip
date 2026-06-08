@@ -29,6 +29,15 @@
     <meta name="msapplication-tap-highlight" content="no" />
     <link rel="mask-icon" href="/favicon-32.png" color="#C62828" />
     
+    <!-- Captura global de beforeinstallprompt para evitar eventos perdidos en SPA -->
+    <script>
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        window.deferredPrompt = e;
+        window.dispatchEvent(new CustomEvent('pwa-prompt-available', { detail: e }));
+      });
+    </script>
+    
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=logo-v2" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=logo-v2" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=logo-v2" />
