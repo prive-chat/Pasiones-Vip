@@ -62,6 +62,11 @@ export default function Navbar() {
     menuItems.push({ label: 'Administración', path: '/admin', icon: ShieldAlert });
   }
 
+  // Prevent rendering the Navbar on the login/register page
+  if (location.pathname === '/auth') {
+    return null;
+  }
+
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-black/60 backdrop-blur-2xl">
       <div className="container mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
