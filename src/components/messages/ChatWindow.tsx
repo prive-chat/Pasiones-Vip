@@ -44,6 +44,7 @@ interface ChatWindowProps {
   setPremiumPrice?: (val: number) => void;
   isSelfDestructing?: boolean;
   setIsSelfDestructing?: (val: boolean) => void;
+  isVerified?: boolean;
 }
 
 export const ChatWindow: FC<ChatWindowProps> = ({
@@ -76,7 +77,8 @@ export const ChatWindow: FC<ChatWindowProps> = ({
   premiumPrice = 5,
   setPremiumPrice,
   isSelfDestructing = false,
-  setIsSelfDestructing
+  setIsSelfDestructing,
+  isVerified = false
 }) => {
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -417,88 +419,120 @@ export const ChatWindow: FC<ChatWindowProps> = ({
         </AnimatePresence>
 
         {/* VIP Premium & Auto-destruction controls bar */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-          {/* Muro Premium VIP toggle */}
-          <button
-            type="button"
-            onClick={() => setIsPremiumVip?.(!isPremiumVip)}
-            className={cn(
-              "p-3 rounded-2xl border text-left flex justify-between items-center transition-all bg-black/40",
-              isPremiumVip
-                ? "border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.15)] bg-gradient-to-r from-amber-500/10 to-transparent"
-                : "border-white/5 hover:border-white/10"
-            )}
-          >
+        {!isVerified ? (
+          <div className="p-3 rounded-2xl border border-amber-500/10 bg-gradient-to-r from-amber-500/5 via-transparent to-transparent mb-3 flex items-center justify-between gap-3">
             <div className="flex items-center space-x-2.5 min-w-0">
-              <div className={cn(
-                "p-2 rounded-xl shrink-0 transition-colors",
-                isPremiumVip ? "bg-amber-500/20 text-amber-400" : "bg-white/5 text-white/40"
-              )}>
+              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500 shrink-0">
                 <Lock size={15} />
               </div>
               <div className="space-y-0.5 min-w-0">
-                <span className="text-[10px] font-black uppercase text-white tracking-widest block">Muro Premium</span>
-                <span className="text-[8px] font-black uppercase text-white/40 tracking-wider block">Bloquear con $</span>
+                <span className="text-[10px] font-black uppercase text-amber-500 tracking-widest block">Muro Premium VIP y Auto-Destrucción</span>
+                <span className="text-[8px] font-black uppercase text-white/40 tracking-wider block">Verifica tu cuenta para monetizar tus mensajes</span>
               </div>
             </div>
-            
-            {isPremiumVip && (
-              <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 bg-black/60 rounded-xl px-2 py-0.5 border border-amber-500/20 shrink-0">
-                <span className="text-[10px] font-mono text-amber-400 font-bold">$</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="1000"
-                  value={premiumPrice}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value, 10);
-                    if (!isNaN(val)) setPremiumPrice?.(val);
-                  }}
-                  className="w-10 bg-transparent text-white font-bold font-mono text-xs text-center focus:outline-none focus:ring-0 p-0 border-none m-0 rounded"
-                />
-              </div>
-            )}
-            
-            {!isPremiumVip && (
-              <div className="h-4 w-4 rounded-md border border-white/20 shrink-0" />
-            )}
-          </button>
-
-          {/* Auto-Destrucción toggle */}
-          <button
-            type="button"
-            onClick={() => setIsSelfDestructing?.(!isSelfDestructing)}
-            className={cn(
-              "p-3 rounded-2xl border text-left flex justify-between items-center transition-all bg-black/40",
-              isSelfDestructing
-                ? "border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.15)] bg-gradient-to-r from-red-500/10 to-transparent"
-                : "border-white/5 hover:border-white/10"
-            )}
-          >
-            <div className="flex items-center space-x-2.5 min-w-0">
-              <div className={cn(
-                "p-2 rounded-xl shrink-0 transition-colors",
-                isSelfDestructing ? "bg-red-500/20 text-red-500" : "bg-white/5 text-white/40"
-              )}>
-                <EyeOff size={15} />
-              </div>
-              <div className="space-y-0.5 min-w-0">
-                <span className="text-[10px] font-black uppercase text-white tracking-widest block">Auto-Destrucción</span>
-                <span className="text-[8px] font-black uppercase text-white/40 tracking-wider block">Visualización única</span>
-              </div>
-            </div>
-
-            <div className="flex items-center">
-              {isSelfDestructing ? (
-                <div className="h-4 w-4 bg-red-500 rounded-full flex items-center justify-center border border-red-400">
-                  <div className="h-1.5 w-1.5 bg-black rounded-full" />
+            <Link 
+              to="/settings" 
+              className="px-3 py-1.5 bg-amber-500 text-black text-[9px] font-black uppercase tracking-widest rounded-xl hover:opacity-90 active:scale-95 transition-all shrink-0 font-bold"
+            >
+              Verificarme
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
+              {/* Muro Premium VIP toggle */}
+              <button
+                type="button"
+                disabled={!filePreview}
+                onClick={() => setIsPremiumVip?.(!isPremiumVip)}
+                className={cn(
+                  "p-3 rounded-2xl border text-left flex justify-between items-center transition-all bg-black/40",
+                  !filePreview ? "opacity-30 cursor-not-allowed border-white/5" : "hover:border-white/10",
+                  isPremiumVip
+                    ? "border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.15)] bg-gradient-to-r from-amber-500/10 to-transparent"
+                    : "border-white/5"
+                )}
+              >
+                <div className="flex items-center space-x-2.5 min-w-0">
+                  <div className={cn(
+                    "p-2 rounded-xl shrink-0 transition-colors",
+                    isPremiumVip ? "bg-amber-500/20 text-amber-400" : "bg-white/5 text-white/40"
+                  )}>
+                    <Lock size={15} />
+                  </div>
+                  <div className="space-y-0.5 min-w-0">
+                    <span className="text-[10px] font-black uppercase text-white tracking-widest block">Muro Premium</span>
+                    <span className="text-[8px] font-black uppercase text-white/40 tracking-wider block">Bloquear con $</span>
+                  </div>
                 </div>
-              ) : (
-                <div className="h-4 w-4 rounded-md border border-white/20" />
-              )}
+                
+                {isPremiumVip && (
+                  <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 bg-black/60 rounded-xl px-2 py-0.5 border border-amber-500/20 shrink-0">
+                    <span className="text-[10px] font-mono text-amber-400 font-bold">$</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="1000"
+                      value={premiumPrice}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val)) setPremiumPrice?.(val);
+                      }}
+                      className="w-10 bg-transparent text-white font-bold font-mono text-xs text-center focus:outline-none focus:ring-0 p-0 border-none m-0 rounded"
+                    />
+                  </div>
+                )}
+                
+                {!isPremiumVip && (
+                  <div className="h-4 w-4 rounded-md border border-white/20 shrink-0" />
+                )}
+              </button>
+
+              {/* Auto-Destrucción toggle */}
+              <button
+                type="button"
+                disabled={!filePreview}
+                onClick={() => setIsSelfDestructing?.(!isSelfDestructing)}
+                className={cn(
+                  "p-3 rounded-2xl border text-left flex justify-between items-center transition-all bg-black/40",
+                  !filePreview ? "opacity-30 cursor-not-allowed border-white/5" : "hover:border-white/10",
+                  isSelfDestructing
+                    ? "border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.15)] bg-gradient-to-r from-red-500/10 to-transparent"
+                    : "border-white/5"
+                )}
+              >
+                <div className="flex items-center space-x-2.5 min-w-0">
+                  <div className={cn(
+                    "p-2 rounded-xl shrink-0 transition-colors",
+                    isSelfDestructing ? "bg-red-500/20 text-red-500" : "bg-white/5 text-white/40"
+                  )}>
+                    <EyeOff size={15} />
+                  </div>
+                  <div className="space-y-0.5 min-w-0">
+                    <span className="text-[10px] font-black uppercase text-white tracking-widest block">Auto-Destrucción</span>
+                    <span className="text-[8px] font-black uppercase text-white/40 tracking-wider block">Visualización única</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center">
+                  {isSelfDestructing ? (
+                    <div className="h-4 w-4 bg-red-500 rounded-full flex items-center justify-center border border-red-400">
+                      <div className="h-1.5 w-1.5 bg-black rounded-full" />
+                    </div>
+                  ) : (
+                    <div className="h-4 w-4 rounded-md border border-white/20" />
+                  )}
+                </div>
+              </button>
             </div>
-          </button>
-        </div>
+            
+            {!filePreview && (
+              <p className="text-[8px] font-black text-white/30 uppercase tracking-widest text-center mb-3">
+                📷 Adjunta foto o video para activar el Muro Premium VIP o la Auto-Destrucción
+              </p>
+            )}
+          </>
+        )}
 
         <form onSubmit={onSendMessage} className="flex items-end space-x-2">
           {!isRecording ? (

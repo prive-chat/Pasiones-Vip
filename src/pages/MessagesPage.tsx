@@ -388,7 +388,12 @@ export default function MessagesPage() {
           onFileSelect={handleFileSelect}
           onMediaClick={(url, type) => setViewerMedia({ url, type })}
           filePreview={filePreview}
-          onRemoveFile={() => { setSelectedFile(null); setFilePreview(null); }}
+          onRemoveFile={() => { 
+            setSelectedFile(null); 
+            setFilePreview(null); 
+            setIsPremiumVip(false); 
+            setIsSelfDestructing(false); 
+          }}
           isSending={sendMessageMutation.isPending}
           sendError={sendError}
           scrollRef={scrollRef}
@@ -406,6 +411,7 @@ export default function MessagesPage() {
           setPremiumPrice={setPremiumPrice}
           isSelfDestructing={isSelfDestructing}
           setIsSelfDestructing={setIsSelfDestructing}
+          isVerified={currentProfile?.is_verified || false}
         />
       </div>
 
