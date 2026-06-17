@@ -15,6 +15,7 @@ import { Button } from './ui/Button';
 import { creditsManager } from '../lib/credits';
 import { useNotificationStore } from '../store/notificationStore';
 import { useEffect } from 'react';
+import { useUIStore } from '../store/uiStore';
 
 interface MediaCardProps {
   item: MediaItem;
@@ -34,6 +35,7 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { addToast } = useNotificationStore();
+  const setActiveModal = useUIStore((state) => state.setActiveModal);
   const [showReactions, setShowReactions] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -101,9 +103,10 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
       addToast({
         type: 'error',
         message: 'Créditos Insuficientes',
-        description: `Esta publicación cuesta ${premiumPrice} créditos. Recarga saldo en tu Cartera arriba.`,
+        description: `Esta publicación cuesta ${premiumPrice} créditos. Recarga tu saldo de forma segura.`,
         duration: 5000
       });
+      setActiveModal('payment', { price: premiumPrice });
     }
   };
 

@@ -7,6 +7,7 @@ import StatsModal from '@/src/components/layout/StatsModal';
 import AdModal from '@/src/components/admin/AdModal';
 import StoryUploadModal from '@/src/features/stories/StoryUploadModal';
 import StoryViewer from '@/src/features/stories/StoryViewer';
+import PaymentModal from '@/src/components/layout/PaymentModal';
 
 export default function ModalCenter() {
   const { activeModal, modalData, closeModal } = useUIStore();
@@ -25,6 +26,8 @@ export default function ModalCenter() {
         return <StoryUploadModal onComplete={closeModal} />;
       case 'story_view':
         return <StoryViewer stories={modalData?.stories} initialIndex={modalData?.index} onClose={closeModal} />;
+      case 'payment':
+        return <PaymentModal />;
       default:
         return null;
     }
@@ -37,6 +40,7 @@ export default function ModalCenter() {
       case 'ad': return modalData ? 'Editar Anuncio' : 'Nuevo Anuncio';
       case 'story_upload': return 'Publicar Historia VIP';
       case 'story_view': return ''; // Viewer doesn't need header
+      case 'payment': return 'Depósito Seguro - Pasarela VIP';
       default: return '';
     }
   };

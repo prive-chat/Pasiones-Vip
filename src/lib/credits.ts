@@ -3,9 +3,9 @@ export const creditsManager = {
   getCredits(): number {
     const stored = localStorage.getItem('pasiones_vip_user_credits');
     if (stored === null) {
-      // Grant 250 credits to new users so they can inspect premium features safely
-      localStorage.setItem('pasiones_vip_user_credits', '250');
-      return 250;
+      // Grant 50 credits of courtesy to new users
+      localStorage.setItem('pasiones_vip_user_credits', '50');
+      return 50;
     }
     return parseInt(stored, 10);
   },

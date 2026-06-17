@@ -32,7 +32,7 @@ export default function UserIdentityBar() {
   };
 
   const simulateRecharge = () => {
-    creditsManager.addCredits(100);
+    setActiveModal('payment');
   };
 
   return (
@@ -104,11 +104,11 @@ export default function UserIdentityBar() {
             </div>
             <button
               onClick={simulateRecharge}
-              className="ml-2 flex items-center gap-1 bg-amber-500 hover:bg-amber-400 active:scale-95 text-black text-[9px] font-black uppercase tracking-wider py-1 px-2.5 rounded-lg transition-all"
-              title="Obtener 100 créditos grátis para pruebas"
+              className="ml-2 flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 active:scale-95 text-black text-[9px] font-black uppercase tracking-wider py-1.5 px-3 rounded-lg transition-all"
+              title="Comprar créditos VIP (Pasarela de Pago)"
             >
-              <PlusCircle size={10} />
-              <span>+100</span>
+              <PlusCircle size={11} />
+              <span>+ COMPRAR</span>
             </button>
           </motion.div>
         </div>
