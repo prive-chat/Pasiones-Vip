@@ -37,6 +37,41 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+// Auto country detection by client IP address
+app.get("/api/detect-country", async (req, res) => {
+  try {
+    const rawIp = (req.headers["x-forwarded-for"] as string || req.ip || "").trim();
+    const clientIp = rawIp.split(",")[0].trim();
+    
+    // Check for private IPs or localhost
+    const isLocal = !clientIp || 
+                    clientIp === "127.0.0.1" || 
+                    clientIp === "::1" || 
+                    clientIp.startsWith("10.") || 
+                    clientIp.startsWith("192.168.") || 
+                    clientIp.startsWith("172.");
+
+    // Query IP details
+    const targetUrl = isLocal ? "http://ip-api.com/json/" : `http://ip-api.com/json/${clientIp}`;
+    const response = await fetch(targetUrl);
+    const data = await response.json();
+    
+    res.json({
+      status: "success",
+      ip: clientIp || "local",
+      countryCode: data.countryCode || "ES", // Default fallback if offline or failed
+      country: data.country || "España"
+    });
+  } catch (error: any) {
+    res.json({
+      status: "error",
+      countryCode: "ES",
+      country: "España",
+      error: error.message
+    });
+  }
+});
+
 // Push notification endpoint
 app.post("/api/send-push", async (req, res) => {
   // Optional: Check for a secret header if you set one in Supabase

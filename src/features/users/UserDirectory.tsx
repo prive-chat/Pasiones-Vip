@@ -12,6 +12,7 @@ import { Input } from '@/src/components/ui/Input';
 import { Button } from '@/src/components/ui/Button';
 import { getSimulatedCoords, calculateDistance } from '@/src/utils/geolocation';
 import { WORLD_COUNTRIES } from '@/src/utils/worldData';
+import { parseProfileBio } from '@/src/utils/profileMetadata';
 
 // Deterministic hashing helper to assign specs to profiles so the filters feel lifelike
 function getDeterministicSpecs(id: string) {
@@ -83,13 +84,29 @@ export default function UserDirectory() {
 
   // Transform profiles with deterministic location coordinates, distances, and high-spec metadata
   const processedUsers = rawUsers.map((u: any) => {
+    const { metadata } = parseProfileBio(u.bio);
     const specs = getDeterministicSpecs(u.id);
-    const coords = getSimulatedCoords(u.id, u.city || city || 'Madrid');
+
+    const mergedAge = metadata.age !== undefined ? metadata.age : specs.age;
+    const mergedHair = metadata.hair || specs.hair;
+    const mergedEyes = metadata.eyes || specs.eyes;
+    const mergedService = metadata.service || specs.service;
+    const mergedCountry = metadata.country || 'espana';
+    const mergedProvince = metadata.province || '';
+    const mergedCity = metadata.city || u.city || 'Madrid';
+
+    const coords = getSimulatedCoords(u.id, mergedCity);
     const distanceKm = calculateDistance(baseSimRef.lat, baseSimRef.lng, coords.lat, coords.lng);
     
     return {
       ...u,
-      ...specs,
+      age: mergedAge,
+      hair: mergedHair,
+      eyes: mergedEyes,
+      service: mergedService,
+      country: mergedCountry,
+      province: mergedProvince,
+      city: mergedCity,
       coords,
       distanceKm
     };
@@ -97,6 +114,12 @@ export default function UserDirectory() {
 
   // Apply all client-side physical and distance filters
   const filteredUsers = processedUsers.filter((u: any) => {
+    // Country Filter
+    if (selectedCountry !== 'Todos' && u.country && u.country.toLowerCase() !== selectedCountry.toLowerCase()) return false;
+
+    // Province Filter
+    if (selectedProvince && u.province && u.province.toLowerCase() !== selectedProvince.toLowerCase()) return false;
+
     // Distance Filter - only apply if a specific city is selected
     if (city && u.distanceKm > maxDistance) return false;
     

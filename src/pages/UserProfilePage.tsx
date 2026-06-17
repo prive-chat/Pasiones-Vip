@@ -42,6 +42,8 @@ import { ProfileSkeleton } from '@/src/components/Skeletons';
 import { useUserStats } from '@/src/hooks/useUserStats';
 import { Input } from '@/src/components/ui/Input';
 import { useNotificationStore } from '@/src/store/notificationStore';
+import { parseProfileBio } from '@/src/utils/profileMetadata';
+import { WORLD_COUNTRIES } from '@/src/utils/worldData';
 
 export default function UserProfilePage() {
   const { userId } = useParams<{ userId: string }>();
@@ -763,38 +765,71 @@ export default function UserProfilePage() {
               <Card className="glass-card border-none p-8">
                 <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-widest italic">Acerca de {profile.full_name?.split(' ')[0]}</h3>
                 <div className="space-y-6">
-                  <div className="flex items-start space-x-4">
-                    <div className="p-3 bg-primary-600/20 rounded-xl text-primary-400">
-                      <UserIcon size={24} />
-                    </div>
-                    <div>
-                      <p className="text-xs font-black text-white/30 uppercase tracking-[0.2em] mb-1">Descripción</p>
-                      <p className="text-white/80 leading-relaxed italic">
-                        {profile.bio || 'Sin descripción disponible.'}
-                      </p>
-                    </div>
-                  </div>
+                  {(() => {
+                    const { cleanBio, metadata } = parseProfileBio(profile.bio);
+                    const countryName = metadata.country ? (WORLD_COUNTRIES[metadata.country]?.name || metadata.country) : '';
+                    const displayCountryFlag = metadata.country ? (WORLD_COUNTRIES[metadata.country]?.flag || '🌍') : '🌍';
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-6 border-t border-white/10">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
-                        <MapPin size={24} />
-                      </div>
-                      <div>
-                        <p className="text-xs font-black text-white/30 uppercase tracking-[0.2em]">Ciudad</p>
-                        <p className="text-white font-bold">{profile.city || 'No especificada'}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 bg-purple-500/10 rounded-xl text-purple-400">
-                        <Tag size={24} />
-                      </div>
-                      <div>
-                        <p className="text-xs font-black text-white/30 uppercase tracking-[0.2em]">Categoría</p>
-                        <p className="text-white font-bold">{profile.category || 'No especificada'}</p>
-                      </div>
-                    </div>
-                  </div>
+                    return (
+                      <>
+                        <div className="flex items-start space-x-4">
+                          <div className="p-3 bg-primary-600/20 rounded-xl text-primary-400">
+                            <UserIcon size={24} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-white/30 uppercase tracking-[0.2em] mb-1">Descripción</p>
+                            <p className="text-white/80 leading-relaxed italic">
+                              {cleanBio || 'Sin descripción disponible.'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Hierarchical metadata specification grid */}
+                        <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-white/10 text-xs text-left">
+                          <div className="flex flex-col bg-white/5 p-3.5 rounded-2xl border border-white/5">
+                            <span className="text-[10px] font-black uppercase text-white/30 tracking-widest">País de Origen</span>
+                            <span className="text-white font-bold text-sm mt-1 flex items-center gap-1.5">
+                              <span>{displayCountryFlag}</span> {countryName || 'España'}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col bg-white/5 p-3.5 rounded-2xl border border-white/5">
+                            <span className="text-[10px] font-black uppercase text-white/30 tracking-widest">Provincia / Región</span>
+                            <span className="text-white font-bold text-sm mt-1">{metadata.province || 'No especificada'}</span>
+                          </div>
+
+                          <div className="flex flex-col bg-white/5 p-3.5 rounded-2xl border border-white/5">
+                            <span className="text-[10px] font-black uppercase text-white/30 tracking-widest">Ciudad de Encuentro</span>
+                            <span className="text-white font-bold text-sm mt-1 flex items-center gap-1.5 text-primary-400">
+                              <MapPin size={12} /> {profile.city || metadata.city || 'No especificada'}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col bg-white/5 p-3.5 rounded-2xl border border-white/5">
+                            <span className="text-[10px] font-black uppercase text-white/30 tracking-widest">Edad Verificada</span>
+                            <span className="text-white font-bold text-sm mt-1">{metadata.age ? `${metadata.age} años` : '25 años'}</span>
+                          </div>
+
+                          <div className="flex flex-col bg-white/5 p-3.5 rounded-2xl border border-white/5">
+                            <span className="text-[10px] font-black uppercase text-white/30 tracking-widest">Color de Cabello</span>
+                            <span className="text-white font-bold text-sm mt-1">{metadata.hair || 'Rubio'}</span>
+                          </div>
+
+                          <div className="flex flex-col bg-white/5 p-3.5 rounded-2xl border border-white/5">
+                            <span className="text-[10px] font-black uppercase text-white/30 tracking-widest">Color de Ojos</span>
+                            <span className="text-white font-bold text-sm mt-1">{metadata.eyes || 'Oscuro'}</span>
+                          </div>
+
+                          <div className="flex flex-col bg-white/5 col-span-2 p-3.5 rounded-2xl border border-white/5">
+                            <span className="text-[10px] font-black uppercase text-white/20 tracking-widest">Especialidad Principal</span>
+                            <span className="text-[#E60000] font-black text-sm mt-1 uppercase tracking-wider flex items-center gap-1.5">
+                              <Tag size={12} /> {metadata.service || profile.category || 'GFe (Novia)'}
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </Card>
 

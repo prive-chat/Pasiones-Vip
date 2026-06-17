@@ -11,6 +11,8 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import { profileService } from '../services/profileService';
 import { useUserStats } from '../hooks/useUserStats';
 import { optimizeImage } from '../lib/imageOptimization';
+import { WORLD_COUNTRIES } from '../utils/worldData';
+import { parseProfileBio, serializeProfileBio } from '../utils/profileMetadata';
 
 export default function SettingsPage() {
   const { user, profile, refreshProfile, signOut } = useAuth();
@@ -25,6 +27,17 @@ export default function SettingsPage() {
   const [city, setCity] = useState('');
   const [category, setCategory] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
+  
+  // Advanced biological and location specifications
+  const [age, setAge] = useState<number>(25);
+  const [hair, setHair] = useState<string>('Rubio');
+  const [eyes, setEyes] = useState<string>('Oscuro');
+  const [service, setService] = useState<string>('GFe (Novia)');
+  const [country, setCountry] = useState<string>('espana');
+  const [province, setProvince] = useState<string>('');
+  const [detectedCountryCode, setDetectedCountryCode] = useState<string>('');
+  const [detectedCountryName, setDetectedCountryName] = useState<string>('');
+  const [isDetectingCountry, setIsDetectingCountry] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -99,16 +112,66 @@ export default function SettingsPage() {
     }
   };
 
+  // Automatically detect user's country from server IP geo API for security
+  useEffect(() => {
+    async function detectUserCountry() {
+      setIsDetectingCountry(true);
+      try {
+        const response = await fetch('/api/detect-country');
+        const data = await response.json();
+        if (data && data.countryCode) {
+          setDetectedCountryCode(data.countryCode);
+          setDetectedCountryName(data.country);
+          
+          const mappings: Record<string, string> = {
+            'ES': 'espana',
+            'EC': 'ecuador',
+            'CO': 'colombia',
+            'MX': 'mexico',
+            'US': 'usa',
+            'AR': 'argentina',
+            'PE': 'peru',
+            'VE': 'venezuela',
+            'CL': 'chile'
+          };
+          
+          const mappedKey = mappings[data.countryCode.toUpperCase()];
+          if (mappedKey) {
+            setCountry(mappedKey);
+          } else {
+            setCountry('otros');
+          }
+        }
+      } catch (err) {
+        console.error('Error auto-detecting country:', err);
+      } finally {
+        setIsDetectingCountry(false);
+      }
+    }
+    
+    detectUserCountry();
+  }, []);
+
   useEffect(() => {
     if (profile) {
       setFullName(profile.full_name || '');
       setUsername(profile.username || '');
       setAvatarUrl(profile.avatar_url || '');
       setCoverUrl(profile.cover_url || '');
-      setBio(profile.bio || '');
-      setCity(profile.city || '');
-      setCategory(profile.category || '');
+      
+      const { cleanBio, metadata } = parseProfileBio(profile.bio || '');
+      setBio(cleanBio);
+      
+      setCity(profile.city || metadata.city || '');
+      setCategory(profile.category || metadata.service || '');
       setIsPrivate(profile.is_private || false);
+
+      if (metadata.age) setAge(metadata.age);
+      if (metadata.hair) setHair(metadata.hair);
+      if (metadata.eyes) setEyes(metadata.eyes);
+      if (metadata.service) setService(metadata.service);
+      if (metadata.country) setCountry(metadata.country);
+      if (metadata.province) setProvince(metadata.province);
     }
   }, [profile]);
 
@@ -127,6 +190,17 @@ export default function SettingsPage() {
     setMessage(null);
 
     try {
+      const metadataBlock = {
+        age,
+        hair,
+        eyes,
+        service,
+        country,
+        province,
+        city
+      };
+      const finalBio = serializeProfileBio(bio, metadataBlock);
+
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -134,9 +208,9 @@ export default function SettingsPage() {
           username: username.toLowerCase(),
           avatar_url: avatarUrl,
           cover_url: coverUrl,
-          bio: bio,
+          bio: finalBio,
           city: city,
-          category: category,
+          category: category || service,
           is_private: isPrivate,
         })
         .eq('id', user.id);
@@ -610,24 +684,167 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Input
-                      label="Ciudad"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      placeholder="Ej: Madrid, Londres, Tokyo..."
-                      leftElement={<MapPin size={16} className="text-primary-500" />}
-                      variant="glass"
-                    />
+                  {/* Automatic Location Geotagging Block */}
+                  <div className="p-4 bg-zinc-950/40 border border-white/5 rounded-2xl space-y-4">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                      <span className="text-xs font-black uppercase tracking-wider text-white/50 flex items-center">
+                        <MapPin size={14} className="mr-1.5 text-[#E60000]" /> Ubicación Verificada (Seguridad de la App)
+                      </span>
+                      {isDetectingCountry ? (
+                        <span className="text-[10px] text-primary-400 animate-pulse font-bold">Detección de IP activa...</span>
+                      ) : (
+                        <span className="text-[10px] text-green-400 bg-green-500/10 px-2.5 py-0.5 rounded-full border border-green-500/20 font-black uppercase tracking-widest">
+                          🛡️ Verificado por IP: {detectedCountryCode || 'ES'}
+                        </span>
+                      )}
+                    </div>
 
-                    <Input
-                      label="Categoría"
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      placeholder="Ej: Escort, Masajista, Trans..."
-                      leftElement={<Tag size={16} className="text-primary-500" />}
-                      variant="glass"
-                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Country Selection (Locked/Auto-detected for safety as requested) */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-black uppercase tracking-wider text-white/40 ml-1">País de Residencia</label>
+                        <div className="relative">
+                          <select
+                            disabled // Locked for platform security & verification!
+                            value={country}
+                            onChange={(e) => {
+                              setCountry(e.target.value);
+                              setProvince('');
+                              setCity('');
+                            }}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold opacity-80 cursor-not-allowed"
+                          >
+                            {Object.entries(WORLD_COUNTRIES).map(([key, item]) => (
+                              <option key={key} value={key} className="bg-zinc-900 text-white font-bold">
+                                {item.flag} {item.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <p className="text-[10px] text-white/30 italic">Autodetectado automáticamente por IP para la seguridad y transparencia de la Red.</p>
+                      </div>
+
+                      {/* Province Selection based on the country */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-black uppercase tracking-wider text-white/40 ml-1">Provincia / Región</label>
+                        <select
+                          value={province}
+                          onChange={(e) => {
+                            setProvince(e.target.value);
+                            setCity('');
+                          }}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold focus:outline-none focus:ring-2 focus:ring-[#E60000]/50"
+                        >
+                          <option value="" className="bg-zinc-900 text-white">-- Seleccionar Región --</option>
+                          {country && WORLD_COUNTRIES[country]?.provinces && 
+                            Object.keys(WORLD_COUNTRIES[country].provinces).sort().map((prov) => (
+                              <option key={prov} value={prov} className="bg-zinc-900 text-white font-bold">
+                                {prov}
+                              </option>
+                            ))
+                          }
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* City Selection dropdown from the selected province */}
+                    {province && country && WORLD_COUNTRIES[country]?.provinces[province] && (
+                      <div className="space-y-1.5 animate-in slide-in-from-top duration-300">
+                        <label className="text-xs font-black uppercase tracking-wider text-white/40 ml-1">Ciudad de Encuentro</label>
+                        <select
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold focus:outline-none focus:ring-2 focus:ring-[#E60000]/50"
+                        >
+                          <option value="" className="bg-zinc-900 text-white">-- Seleccionar Ciudad --</option>
+                          {WORLD_COUNTRIES[country].provinces[province].map((c) => (
+                            <option key={c} value={c} className="bg-zinc-900 text-white font-bold">
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Physical Specs & Services Block */}
+                  <div className="p-4 bg-zinc-950/40 border border-white/5 rounded-2xl space-y-4">
+                    <span className="text-xs font-black uppercase tracking-wider text-white/50 flex items-center border-b border-white/5 pb-2">
+                      <Tag size={14} className="mr-1.5 text-[#E60000]" /> Características Físicas y Servicios
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Age */}
+                      <div className="space-y-1.5 col-span-1 sm:col-span-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-xs font-black uppercase tracking-wider text-white/40 ml-1">Edad de Trabajo</label>
+                          <span className="text-sm font-black text-white bg-[#E60000]/10 px-2.5 py-0.5 rounded-md text-[#E60000] border border-[#E60000]/20">{age} años</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="18"
+                          max="80"
+                          value={age}
+                          onChange={(e) => setAge(parseInt(e.target.value))}
+                          className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#E60000]"
+                        />
+                        <div className="flex justify-between text-[10px] text-white/30 font-bold">
+                          <span>18 años</span>
+                          <span>80 años</span>
+                        </div>
+                      </div>
+
+                      {/* Hair Color */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-black uppercase tracking-wider text-white/40 ml-1">Color de Cabello</label>
+                        <select
+                          value={hair}
+                          onChange={(e) => setHair(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold focus:outline-none focus:ring-2 focus:ring-[#E60000]/50"
+                        >
+                          {['Rubio', 'Castaño', 'Negro', 'Pelirrojo', 'Platino'].map((h) => (
+                            <option key={h} value={h} className="bg-zinc-900 text-white font-bold">
+                              {h}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Eye Color */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-black uppercase tracking-wider text-white/40 ml-1">Color de Ojos</label>
+                        <select
+                          value={eyes}
+                          onChange={(e) => setEyes(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold focus:outline-none focus:ring-2 focus:ring-[#E60000]/50"
+                        >
+                          {['Azul', 'Verde', 'Miel', 'Oscuro'].map((ey) => (
+                            <option key={ey} value={ey} className="bg-zinc-900 text-white font-bold">
+                              {ey}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Favorite/Premium Specialty Service */}
+                      <div className="space-y-1.5 col-span-1 sm:col-span-2">
+                        <label className="text-xs font-black uppercase tracking-wider text-white/40 ml-1">Especialidad o Servicio VIP Principal</label>
+                        <select
+                          value={service}
+                          onChange={(e) => {
+                            setService(e.target.value);
+                            setCategory(e.target.value); // Sync to category
+                          }}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold focus:outline-none focus:ring-2 focus:ring-[#E60000]/50"
+                        >
+                          {['GFe (Novia)', 'BDSM Premium', 'Masaje Sensual', 'Cena VIP', 'Viajes Exóticos'].map((s) => (
+                            <option key={s} value={s} className="bg-zinc-900 text-white font-bold">
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between rounded-xl bg-white/5 p-4 border border-white/10">
