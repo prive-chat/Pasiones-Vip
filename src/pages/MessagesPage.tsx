@@ -24,6 +24,9 @@ export default function MessagesPage() {
   const queryClient = useQueryClient();
   const [newMessage, setNewMessage] = useState('');
   const [refPost, setRefPost] = useState<MediaItem | null>(null);
+  const [isPremiumVip, setIsPremiumVip] = useState(false);
+  const [premiumPrice, setPremiumPrice] = useState(5);
+  const [isSelfDestructing, setIsSelfDestructing] = useState(false);
 
   useEffect(() => {
     if (refPostId && targetUserId) {
@@ -102,6 +105,9 @@ export default function MessagesPage() {
       setFilePreview(null);
       setSendError(null);
       setRefPost(null);
+      setIsPremiumVip(false);
+      setPremiumPrice(5);
+      setIsSelfDestructing(false);
       // Remove ref from URL without reloading
       if (refPostId) {
         const newParams = new URLSearchParams(searchParams);
@@ -312,15 +318,18 @@ export default function MessagesPage() {
     roomChannelRef.current?.track({ user_id: currentUser.id, is_typing: false });
 
     let content = newMessage;
-    if (refPost) {
+    if (refPost || isPremiumVip || isSelfDestructing) {
       content = JSON.stringify({
         text: newMessage,
-        postRef: {
+        is_premium_vip: isPremiumVip,
+        premium_price: premiumPrice,
+        is_self_destructing: isSelfDestructing,
+        postRef: refPost ? {
           id: refPost.id,
           url: refPost.url,
           type: refPost.type,
           caption: refPost.caption
-        }
+        } : null
       });
     }
 
@@ -391,6 +400,12 @@ export default function MessagesPage() {
           onReactMessage={(id, emoji) => reactMutation.mutate({ id, emoji })}
           onMessageVisible={(id) => markReadMutation.mutate(id)}
           isOnline={targetUserId ? onlineUserIds.includes(targetUserId) : false}
+          isPremiumVip={isPremiumVip}
+          setIsPremiumVip={setIsPremiumVip}
+          premiumPrice={premiumPrice}
+          setPremiumPrice={setPremiumPrice}
+          isSelfDestructing={isSelfDestructing}
+          setIsSelfDestructing={setIsSelfDestructing}
         />
       </div>
 

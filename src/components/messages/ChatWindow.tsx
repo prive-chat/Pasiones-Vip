@@ -8,7 +8,7 @@ import { Input } from '@/src/components/ui/Input';
 import { MessageBubble } from './MessageBubble';
 import { cn } from '@/src/lib/utils';
 import { Message, UserProfile, MediaItem } from '@/src/types';
-import { X, AlertCircle } from 'lucide-react';
+import { X, AlertCircle, Lock, EyeOff } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { isSameDay, format, isToday, isYesterday } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -38,6 +38,12 @@ interface ChatWindowProps {
   onReactMessage?: (id: string, emoji: string) => void;
   onMessageVisible?: (id: string) => void;
   isOnline?: boolean;
+  isPremiumVip?: boolean;
+  setIsPremiumVip?: (val: boolean) => void;
+  premiumPrice?: number;
+  setPremiumPrice?: (val: number) => void;
+  isSelfDestructing?: boolean;
+  setIsSelfDestructing?: (val: boolean) => void;
 }
 
 export const ChatWindow: FC<ChatWindowProps> = ({
@@ -64,7 +70,13 @@ export const ChatWindow: FC<ChatWindowProps> = ({
   onDeleteMessage,
   onReactMessage,
   onMessageVisible,
-  isOnline = false
+  isOnline = false,
+  isPremiumVip = false,
+  setIsPremiumVip,
+  premiumPrice = 5,
+  setPremiumPrice,
+  isSelfDestructing = false,
+  setIsSelfDestructing
 }) => {
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -403,6 +415,90 @@ export const ChatWindow: FC<ChatWindowProps> = ({
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* VIP Premium & Auto-destruction controls bar */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+          {/* Muro Premium VIP toggle */}
+          <button
+            type="button"
+            onClick={() => setIsPremiumVip?.(!isPremiumVip)}
+            className={cn(
+              "p-3 rounded-2xl border text-left flex justify-between items-center transition-all bg-black/40",
+              isPremiumVip
+                ? "border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.15)] bg-gradient-to-r from-amber-500/10 to-transparent"
+                : "border-white/5 hover:border-white/10"
+            )}
+          >
+            <div className="flex items-center space-x-2.5 min-w-0">
+              <div className={cn(
+                "p-2 rounded-xl shrink-0 transition-colors",
+                isPremiumVip ? "bg-amber-500/20 text-amber-400" : "bg-white/5 text-white/40"
+              )}>
+                <Lock size={15} />
+              </div>
+              <div className="space-y-0.5 min-w-0">
+                <span className="text-[10px] font-black uppercase text-white tracking-widest block">Muro Premium</span>
+                <span className="text-[8px] font-black uppercase text-white/40 tracking-wider block">Bloquear con $</span>
+              </div>
+            </div>
+            
+            {isPremiumVip && (
+              <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 bg-black/60 rounded-xl px-2 py-0.5 border border-amber-500/20 shrink-0">
+                <span className="text-[10px] font-mono text-amber-400 font-bold">$</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="1000"
+                  value={premiumPrice}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val)) setPremiumPrice?.(val);
+                  }}
+                  className="w-10 bg-transparent text-white font-bold font-mono text-xs text-center focus:outline-none focus:ring-0 p-0 border-none m-0 rounded"
+                />
+              </div>
+            )}
+            
+            {!isPremiumVip && (
+              <div className="h-4 w-4 rounded-md border border-white/20 shrink-0" />
+            )}
+          </button>
+
+          {/* Auto-Destrucción toggle */}
+          <button
+            type="button"
+            onClick={() => setIsSelfDestructing?.(!isSelfDestructing)}
+            className={cn(
+              "p-3 rounded-2xl border text-left flex justify-between items-center transition-all bg-black/40",
+              isSelfDestructing
+                ? "border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.15)] bg-gradient-to-r from-red-500/10 to-transparent"
+                : "border-white/5 hover:border-white/10"
+            )}
+          >
+            <div className="flex items-center space-x-2.5 min-w-0">
+              <div className={cn(
+                "p-2 rounded-xl shrink-0 transition-colors",
+                isSelfDestructing ? "bg-red-500/20 text-red-500" : "bg-white/5 text-white/40"
+              )}>
+                <EyeOff size={15} />
+              </div>
+              <div className="space-y-0.5 min-w-0">
+                <span className="text-[10px] font-black uppercase text-white tracking-widest block">Auto-Destrucción</span>
+                <span className="text-[8px] font-black uppercase text-white/40 tracking-wider block">Visualización única</span>
+              </div>
+            </div>
+
+            <div className="flex items-center">
+              {isSelfDestructing ? (
+                <div className="h-4 w-4 bg-red-500 rounded-full flex items-center justify-center border border-red-400">
+                  <div className="h-1.5 w-1.5 bg-black rounded-full" />
+                </div>
+              ) : (
+                <div className="h-4 w-4 rounded-md border border-white/20" />
+              )}
+            </div>
+          </button>
+        </div>
 
         <form onSubmit={onSendMessage} className="flex items-end space-x-2">
           {!isRecording ? (

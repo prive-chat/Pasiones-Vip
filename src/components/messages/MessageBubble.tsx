@@ -1,11 +1,14 @@
 import { FC, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
-import { Check, CheckCheck, Maximize2, ExternalLink, Smile, Trash2, MoreHorizontal } from 'lucide-react';
+import { Check, CheckCheck, Maximize2, ExternalLink, Smile, Trash2, MoreHorizontal, Lock, EyeOff, Coins } from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
 import { cn } from '../../lib/utils';
 import { Message } from '../../types';
 import { useNavigate } from 'react-router-dom';
+import { useUIStore } from '../../store/uiStore';
+import { useNotificationStore } from '../../store/notificationStore';
+import { creditsManager } from '../../lib/credits';
 
 interface MessageBubbleProps {
   message: Message;
@@ -32,6 +35,73 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
   const [showReactions, setShowReactions] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const { addToast } = useNotificationStore();
+  const setActiveModal = useUIStore((state) => state.setActiveModal);
+
+  const [isUnlocked, setIsUnlocked] = useState(() => {
+    if (!message.id) return false;
+    return localStorage.getItem(`unlocked_msg_${message.id}`) === 'true';
+  });
+
+  const [isDestroyed, setIsDestroyed] = useState(() => {
+    if (!message.id) return false;
+    return localStorage.getItem(`destroyed_msg_${message.id}`) === 'true';
+  });
+
+  const [revealSelfDestruct, setRevealSelfDestruct] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown === 0) {
+      localStorage.setItem(`destroyed_msg_${message.id}`, 'true');
+      setIsDestroyed(true);
+      setCountdown(null);
+      addToast({
+        type: 'info',
+        message: 'Contenido Destruido',
+        description: 'El mensaje de un solo uso se ha desvanecido.',
+        duration: 3000
+      });
+      return;
+    }
+    const timer = setTimeout(() => {
+      setCountdown(countdown - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [countdown, message.id, addToast]);
+
+  const effectiveUnlocked = isMe || isUnlocked;
+
+  const handleUnlock = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const parsed = JSON.parse(message.content);
+      const price = parsed.premium_price || 5;
+      const success = creditsManager.deductCredits(price);
+      if (success) {
+        localStorage.setItem(`unlocked_msg_${message.id}`, 'true');
+        setIsUnlocked(true);
+        addToast({
+          type: 'success',
+          message: '¡Mensaje Desbloqueado!',
+          description: 'El pago con créditos fue autorizado.',
+          duration: 3000
+        });
+      } else {
+        addToast({
+          type: 'error',
+          message: 'Saldo Insuficiente',
+          description: `Este mensaje VIP premium requiere ${price} $.`,
+          duration: 4000
+        });
+        setActiveModal('payment', { price });
+      }
+    } catch (err) {
+      console.error('Error unlocking message:', err);
+    }
+  };
 
   const { ref: inViewRef, inView } = useInView({
     threshold: 0.5,
@@ -63,24 +133,91 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
     let mediaType = msgMediaType || null;
     let postRef: any = null;
 
-    // Check if there is an explicit ref_post_id
-    // Note: We might need to fetch the post if it's not pre-loaded, 
-    // but for now we look into JSON for backward compatibility
-    
+    let isPremium = false;
+    let price = 5;
+    let isSelfDestruct = false;
+
     try {
       const parsed = JSON.parse(content);
       if (typeof parsed === 'object' && parsed !== null) {
         text = parsed.text || '';
         if (!mediaUrl) mediaUrl = parsed.mediaUrl || null;
         postRef = parsed.postRef || parsed.post || null;
+        
+        isPremium = !!parsed.is_premium_vip;
+        price = parsed.premium_price || 5;
+        isSelfDestruct = !!parsed.is_self_destructing;
       }
     } catch (e) {
       // Not JSON, just plain text
     }
 
-    // Determine media type if not explicitly provided
     if (mediaUrl && !mediaType) {
       mediaType = (mediaUrl.includes('.mp4') || mediaUrl.includes('.mov')) ? 'video' : 'image';
+    }
+
+    // 1. Check if Premium Lock is active
+    if (isPremium && !effectiveUnlocked) {
+      return (
+        <div className="p-4 bg-gradient-to-b from-amber-600/10 to-amber-900/5 border border-amber-500/20 rounded-2xl text-center space-y-3 max-w-[280px]">
+          <div className="mx-auto w-10 h-10 bg-amber-500/10 rounded-full flex items-center justify-center text-amber-400 border border-amber-500/20">
+            <Lock size={16} className="animate-pulse" />
+          </div>
+          <div className="space-y-1">
+            <h5 className="text-[10px] font-black uppercase text-amber-500 tracking-wider font-sans">Muro Premium VIP</h5>
+            <p className="text-[9px] text-white/50 leading-relaxed uppercase">El remitente bloqueó este mensaje confidencial por {price} $.</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleUnlock}
+            className="w-full py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:opacity-90 text-black font-black uppercase tracking-widest text-[9px] rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-1.5 font-bold"
+          >
+            <span>Desbloquear por {price} $</span>
+          </button>
+        </div>
+      );
+    }
+
+    // 2. Check if Self Destruct is active
+    if (isSelfDestruct) {
+      if (isDestroyed) {
+        return (
+          <div className="p-4 bg-zinc-950/40 border border-white/5 rounded-2xl flex items-center gap-3 max-w-[280px] opacity-60">
+            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 shrink-0">
+              <EyeOff size={14} />
+            </div>
+            <div className="space-y-0.5">
+              <h5 className="text-[10px] font-black uppercase text-white/40 tracking-wider">Contenido Destruido</h5>
+              <p className="text-[9px] text-white/30 uppercase leading-none">Auto-destrucción completada.</p>
+            </div>
+          </div>
+        );
+      }
+
+      if (!isMe && !revealSelfDestruct) {
+        return (
+          <div className="p-4 bg-gradient-to-b from-red-600/10 to-red-900/5 border border-red-500/20 rounded-2xl text-center space-y-3 max-w-[280px]">
+            <div className="mx-auto w-10 h-10 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 border border-red-500/20">
+              <EyeOff size={16} />
+            </div>
+            <div className="space-y-1">
+              <h5 className="text-[10px] font-black uppercase text-red-500 tracking-wider">Visualización Única</h5>
+              <p className="text-[9px] text-white/50 leading-relaxed uppercase font-sans">Haz clic para descubrir este contenido privado durante 10 segundos.</p>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setRevealSelfDestruct(true);
+                setCountdown(10);
+              }}
+              className="w-full py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:opacity-90 text-white font-black uppercase tracking-widest text-[9px] rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-1.5 font-bold"
+            >
+              <span>Revelar Contenido Seguro</span>
+            </button>
+          </div>
+        );
+      }
     }
     
     return (
@@ -122,6 +259,17 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
           </div>
         )}
         {text && <p className="whitespace-pre-wrap break-words">{text}</p>}
+        {countdown !== null && (
+          <div className="mt-2 bg-red-500/10 border border-red-500/25 rounded-xl p-2 flex items-center justify-between text-[8px] font-black uppercase tracking-widest text-red-500 font-mono animate-pulse shrink-0">
+            <span>Se destruirá en...</span>
+            <span className="text-xs font-bold font-mono">{countdown}s</span>
+          </div>
+        )}
+        {isSelfDestruct && isMe && (
+          <div className="text-[8px] font-black uppercase text-white/40 bg-white/5 border border-white/10 rounded-lg px-2 py-0.5 tracking-wider w-fit">
+            👁️ Autodestrucción Activa
+          </div>
+        )}
       </div>
     );
   };
