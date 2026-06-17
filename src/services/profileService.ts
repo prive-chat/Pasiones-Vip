@@ -53,7 +53,7 @@ export const profileService = {
       queryBuilder = queryBuilder.ilike('category', `%${filters.category}%`);
     }
 
-    const { data, error } = await queryBuilder.limit(20);
+    const { data, error } = await queryBuilder;
 
     if (error) throw error;
     return data as UserProfile[];

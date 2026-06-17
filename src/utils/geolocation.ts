@@ -1,4 +1,7 @@
+import { WORLD_COUNTRIES } from './worldData';
+
 const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
+  // España Core
   madrid: { lat: 40.4168, lng: -3.7038 },
   barcelona: { lat: 41.3851, lng: 2.1734 },
   valencia: { lat: 39.4699, lng: -0.3763 },
@@ -7,7 +10,7 @@ const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
   ibiza: { lat: 38.9067, lng: 1.4206 },
   mallorca: { lat: 39.6953, lng: 3.0176 },
   
-  // Ecuador Cities Coords
+  // Ecuador Core
   quito: { lat: -0.1807, lng: -78.4678 },
   guayaquil: { lat: -2.1894, lng: -79.8890 },
   cuenca: { lat: -2.9001, lng: -79.0059 },
@@ -31,17 +34,57 @@ const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
   cariamanga: { lat: -4.3256, lng: -79.5544 }
 };
 
+// Base coordinates for each country in case we only know the country
+const COUNTRY_COORDS_BASE: Record<string, { lat: number; lng: number }> = {
+  espana: { lat: 40.4168, lng: -3.7038 }, // Madrid
+  ecuador: { lat: -0.1807, lng: -78.4678 }, // Quito
+  colombia: { lat: 4.7110, lng: -74.0721 }, // Bogotá
+  mexico: { lat: 19.4326, lng: -99.1332 }, // CDMX
+  usa: { lat: 37.0902, lng: -95.7129 }, // Center of US
+  argentina: { lat: -34.6037, lng: -58.3816 }, // BA
+  peru: { lat: -12.0464, lng: -77.0428 }, // Lima
+  venezuela: { lat: 10.4806, lng: -66.9036 }, // Caracas
+  chile: { lat: -33.4489, lng: -70.6693 } // Santiago
+};
+
 export function getSimulatedCoords(userId: string, city: string) {
   const normCity = (city || 'madrid').toLowerCase().trim();
-  const base = CITY_COORDS[normCity] || CITY_COORDS.madrid;
   
-  // Create deterministic hash from userId string
+  // 1. Direct match
+  let base = CITY_COORDS[normCity];
+  
+  // 2. Scan geographic database for dynamic matching if not direct match
+  if (!base) {
+    let matchedCountryKey = 'espana';
+    let found = false;
+
+    // Search through states and cities
+    for (const [countryKey, countryData] of Object.entries(WORLD_COUNTRIES)) {
+      if (found) break;
+      for (const [province, cities] of Object.entries(countryData.provinces)) {
+        // Match province name or city name
+        if (
+          province.toLowerCase().trim() === normCity ||
+          cities.some(c => c.toLowerCase().trim() === normCity)
+        ) {
+          matchedCountryKey = countryKey;
+          found = true;
+          break;
+        }
+      }
+    }
+
+    // Default to country base, or Madrid as ultimo resource
+    base = COUNTRY_COORDS_BASE[matchedCountryKey] || CITY_COORDS.madrid;
+  }
+  
+  // Create deterministic hash from userId string to scatter profiles
   let hash = 0;
   for (let i = 0; i < userId.length; i++) {
     hash = userId.charCodeAt(i) + ((hash << 5) - hash);
   }
   
-  // Generate stable relative radial offset (within ~15-20km range)
+  // Stable relative radial offset (within ~15-20km range)
   const latOffset = ((Math.abs(hash) % 100) / 600) - 0.082;
   const lngOffset = (((Math.abs(hash) >> 4) % 100) / 600) - 0.082;
   

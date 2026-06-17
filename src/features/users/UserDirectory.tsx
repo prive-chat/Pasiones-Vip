@@ -11,6 +11,7 @@ import { ProfileSkeleton } from '@/src/components/Skeletons';
 import { Input } from '@/src/components/ui/Input';
 import { Button } from '@/src/components/ui/Button';
 import { getSimulatedCoords, calculateDistance } from '@/src/utils/geolocation';
+import { WORLD_COUNTRIES } from '@/src/utils/worldData';
 
 // Deterministic hashing helper to assign specs to profiles so the filters feel lifelike
 function getDeterministicSpecs(id: string) {
@@ -35,15 +36,6 @@ function getDeterministicSpecs(id: string) {
   };
 }
 
-const ECUADOR_LOCATIONS: Record<string, string[]> = {
-  Pichincha: ['Quito', 'Sangolquí', 'Cayambe', 'Machachi'],
-  Guayas: ['Guayaquil', 'Samborondón', 'Durán', 'Milagro'],
-  Azuay: ['Cuenca', 'Gualaceo', 'Paute'],
-  Manabí: ['Manta', 'Portoviejo', 'Chone', 'Montecristi'],
-  Tungurahua: ['Ambato', 'Baños', 'Pelileo'],
-  Loja: ['Loja', 'Catamayo', 'Cariamanga']
-};
-
 export default function UserDirectory() {
   const [search, setSearch] = useState('');
   const [city, setCity] = useState(''); // Default empty to show all registered users initially without restrictions
@@ -51,7 +43,7 @@ export default function UserDirectory() {
   const [showFilters, setShowFilters] = useState(false);
   
   // Hierarchical Location Level states
-  const [selectedCountry, setSelectedCountry] = useState<'España' | 'Ecuador' | 'Todos'>('Todos');
+  const [selectedCountry, setSelectedCountry] = useState<string>('Todos');
   const [selectedProvince, setSelectedProvince] = useState<string>('');
   
   // Advanced Filter state variables
@@ -201,14 +193,14 @@ export default function UserDirectory() {
         </div>
 
         {/* Hierarchical Coordinates Center Selector */}
-        <div className="space-y-3 p-4 bg-zinc-950/40 border border-white/5 rounded-2xl">
+        <div className="space-y-4 p-4 bg-zinc-950/40 border border-white/5 rounded-2xl">
           {/* Level 1: Country/Global Selection */}
-          <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
+          <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none border-b border-white/5">
             <span className="text-[9px] font-black uppercase tracking-wider text-white/40 whitespace-nowrap mr-2 flex items-center">
-              <MapPin size={10} className="mr-1 text-[#E60000]" /> Centro de Coordenadas:
+              <MapPin size={10} className="mr-1 text-[#E60000]" /> País / Alcance:
             </span>
             
-            {/* Global / Todos option */}
+            {/* Todos option */}
             <button
               type="button"
               onClick={() => {
@@ -225,133 +217,150 @@ export default function UserDirectory() {
               🌍 Todo el Mundo
             </button>
 
-            {/* España Option */}
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedCountry('España');
-                setSelectedProvince('');
-                setCity(''); // reset to empty until they select a city
-              }}
-              className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border whitespace-nowrap ${
-                selectedCountry === 'España'
-                  ? 'bg-[#E60000] border-red-500 text-white shadow-lg shadow-red-600/20'
-                  : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10'
-              }`}
-            >
-              🇪🇸 España
-            </button>
-
-            {/* Ecuador Option */}
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedCountry('Ecuador');
-                setSelectedProvince('');
-                setCity(''); // reset to empty until they select a city
-              }}
-              className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border whitespace-nowrap ${
-                selectedCountry === 'Ecuador'
-                  ? 'bg-[#E60000] border-red-500 text-white shadow-lg shadow-red-600/20'
-                  : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10'
-              }`}
-            >
-              🇪🇨 Ecuador
-            </button>
+            {/* List all other supported countries dynamically */}
+            {Object.entries(WORLD_COUNTRIES).map(([key, country]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setSelectedCountry(key);
+                  setSelectedProvince('');
+                  setCity('');
+                }}
+                className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border whitespace-nowrap ${
+                  selectedCountry === key
+                    ? 'bg-[#E60000] border-red-500 text-white shadow-lg shadow-red-600/20'
+                    : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10'
+                }`}
+              >
+                {country.flag} {country.name}
+              </button>
+            ))}
           </div>
 
-          {/* Level 2: Sub-filter Options based on Country */}
+          {/* Level 2 & 3: Province & City filters based on Selected Country */}
           <AnimatePresence mode="wait">
-            {selectedCountry === 'España' && (
+            {selectedCountry !== 'Todos' && WORLD_COUNTRIES[selectedCountry] && (
               <motion.div
-                key="spain-cities"
-                initial={{ opacity: 0, y: -5 }}
+                key={selectedCountry}
+                initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -5 }}
-                className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none pl-4 border-l-2 border-white/5"
+                exit={{ opacity: 0, y: -8 }}
+                className="space-y-4 pt-1 pl-2 border-l-2 border-[#E60000]/50"
               >
-                <span className="text-[8px] font-black uppercase text-white/30 whitespace-nowrap">Ciudades:</span>
-                {['Madrid', 'Barcelona', 'Ibiza', 'Marbella', 'Valencia', 'Sevilla', 'Mallorca'].map((popCity) => {
-                  const active = city.toLowerCase() === popCity.toLowerCase();
-                  return (
-                    <button
-                      key={popCity}
-                      type="button"
-                      onClick={() => setCity(popCity)}
-                      className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border ${
-                        active
-                          ? 'bg-amber-500 border-amber-600 text-black shadow-md shadow-amber-500/10'
-                          : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10'
-                      }`}
+                {/* Level 2: Province dropdown selector */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-white/50 w-24 shrink-0">
+                    Provincias:
+                  </span>
+                  <div className="flex-1 flex flex-wrap gap-2 items-center">
+                    <select
+                      value={selectedProvince}
+                      onChange={(e) => {
+                        setSelectedProvince(e.target.value);
+                        setCity(''); // Clear selected city when province changes
+                      }}
+                      className="bg-black/60 text-xs font-bold text-white border border-white/10 rounded-xl px-3 py-2 outline-none focus:ring-1 focus:ring-primary-500/50 w-full sm:w-64"
                     >
-                      {popCity}
-                    </button>
-                  );
-                })}
-              </motion.div>
-            )}
+                      <option value="">-- Seleccionar Provincia / Estado --</option>
+                      {Object.keys(WORLD_COUNTRIES[selectedCountry].provinces).sort().map((prov) => (
+                        <option key={prov} value={prov}>
+                          {prov}
+                        </option>
+                      ))}
+                    </select>
 
-            {selectedCountry === 'Ecuador' && (
-              <motion.div
-                key="ecuador-main"
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -5 }}
-                className="flex flex-col space-y-2 pl-4 border-l-2 border-white/5"
-              >
-                {/* Provinces Row */}
-                <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
-                  <span className="text-[8px] font-black uppercase text-white/30 whitespace-nowrap">Provincias:</span>
-                  {Object.keys(ECUADOR_LOCATIONS).map((prov) => {
-                    const active = selectedProvince === prov;
-                    return (
-                      <button
-                        key={prov}
-                        type="button"
-                        onClick={() => {
-                          setSelectedProvince(prov);
-                          setCity(''); // Clear selected city when selecting a new province
-                        }}
-                        className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border ${
-                          active
-                            ? 'bg-amber-500 border-amber-600 text-black font-black shadow-md shadow-amber-500/10'
-                            : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10'
-                        }`}
-                      >
-                        {prov}
-                      </button>
-                    );
-                  })}
+                    {/* Quick Access chips for major provinces of selected country */}
+                    <div className="flex items-center space-x-1.5 overflow-x-auto py-1 scrollbar-none text-[9px]">
+                      {selectedCountry === 'espana' && (
+                        <>
+                          <span className="text-white/25 uppercase text-[8px] mr-1">Rutas Populares:</span>
+                          {['Madrid', 'Barcelona', 'Ibiza', 'Marbella', 'Valencia', 'Sevilla', 'Mallorca'].map((pop) => (
+                            <button
+                              key={pop}
+                              type="button"
+                              onClick={() => {
+                                setSelectedProvince(pop === 'Ibiza' || pop === 'Mallorca' ? 'Baleares' : pop);
+                                setCity(pop);
+                              }}
+                              className={`px-2 py-1 rounded bg-white/5 border border-white/5 hover:bg-white/10 text-white/80 ${city.toLowerCase() === pop.toLowerCase() ? '!bg-amber-500 !border-amber-600 !text-black font-bold' : ''}`}
+                            >
+                              {pop}
+                            </button>
+                          ))}
+                        </>
+                      )}
+                      {selectedCountry === 'ecuador' && (
+                        <>
+                          <span className="text-white/25 uppercase text-[8px] mr-1">Zonas Populares:</span>
+                          {['Pichincha', 'Guayas', 'Azuay', 'Manabí', 'Tungurahua', 'Loja'].map((pop) => (
+                            <button
+                              key={pop}
+                              type="button"
+                              onClick={() => {
+                                setSelectedProvince(pop);
+                                setCity('');
+                              }}
+                              className={`px-2 py-1 rounded bg-white/5 border border-white/5 hover:bg-white/10 text-white/80 ${selectedProvince === pop ? '!bg-amber-500 !border-amber-600 !text-black font-bold' : ''}`}
+                            >
+                              {pop}
+                            </button>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                {/* Cities Row (Visible only if a province is selected) */}
-                {selectedProvince && ECUADOR_LOCATIONS[selectedProvince] && (
+                {/* Level 3: Cities Selection */}
+                {selectedProvince && WORLD_COUNTRIES[selectedCountry].provinces[selectedProvince] && (
                   <motion.div
-                    key="ecuador-cities"
-                    initial={{ opacity: 0, x: -5 }}
+                    key={`${selectedCountry}-${selectedProvince}`}
+                    initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none pl-2 border-l border-white/5 animate-fade-in"
+                    className="flex flex-col sm:flex-row sm:items-center gap-2 pt-2 border-t border-white/5"
                   >
-                    <span className="text-[8px] font-black uppercase text-white/30 whitespace-nowrap">Ciudades:</span>
-                    {ECUADOR_LOCATIONS[selectedProvince].map((popCity) => {
-                      const active = city.toLowerCase() === popCity.toLowerCase();
-                      return (
-                        <button
-                          key={popCity}
-                          type="button"
-                          onClick={() => setCity(popCity)}
-                          className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border ${
-                            active
-                              ? 'bg-primary-600 border-primary-500 text-white shadow-md shadow-primary-500/10'
-                              : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10'
-                          }`}
-                        >
-                          {popCity}
-                        </button>
-                      );
-                    })}
+                    <span className="text-[10px] font-black uppercase tracking-wider text-white/50 w-24 shrink-0">
+                      Ciudades:
+                    </span>
+                    <div className="flex-1 flex flex-wrap gap-1.5 items-center">
+                      {WORLD_COUNTRIES[selectedCountry].provinces[selectedProvince].map((cToken) => {
+                        const active = city.toLowerCase() === cToken.toLowerCase();
+                        return (
+                          <button
+                            key={cToken}
+                            type="button"
+                            onClick={() => setCity(cToken)}
+                            className={`px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all border ${
+                              active
+                                ? 'bg-primary-600 border-primary-500 text-white shadow-md shadow-primary-500/10'
+                                : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+                            }`}
+                          >
+                            {cToken}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </motion.div>
                 )}
+
+                {/* Manual typed city override */}
+                <div className="flex items-center space-x-2 pt-2 border-t border-white/5">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-white/50 w-24 shrink-0">
+                    Buscador Directo:
+                  </span>
+                  <div className="flex-1 max-w-sm relative">
+                    <input
+                      type="text"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="Escribe el nombre de cualquier ciudad..."
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 pl-8 text-xs text-white placeholder:text-white/20 outline-none focus:ring-1 focus:ring-primary-500/50"
+                    />
+                    <Search size={12} className="absolute left-2.5 top-2.5 text-white/30" />
+                  </div>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -360,7 +369,7 @@ export default function UserDirectory() {
           <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-wider text-white/40 pt-1 border-t border-white/5">
             <span>Filtro de Ubicación Activo:</span>
             <span className="text-primary-400 font-mono">
-              {city ? `📍 ${city}` : '🌍 Todo el Mundo (Mostrando Todos los Usuarios)'}
+              {city ? `📍 ${city} (${selectedCountry !== 'Todos' ? WORLD_COUNTRIES[selectedCountry]?.name : 'Búsqueda Global'})` : '🌍 Todo el Mundo (Mostrando Todos los Usuarios)'}
             </span>
           </div>
         </div>
