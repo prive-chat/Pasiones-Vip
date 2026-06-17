@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+import { useState, useEffect, FormEvent, ChangeEvent, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { Link, useNavigate } from 'react-router-dom';
@@ -46,6 +46,12 @@ export default function SettingsPage() {
   const [isStandalone, setIsStandalone] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isInIframe, setIsInIframe] = useState(false);
+
+  const [isCameraSelectOpen, setIsCameraSelectOpen] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [snapshot, setSnapshot] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     const inIframe = window.self !== window.top;
@@ -321,15 +327,13 @@ export default function SettingsPage() {
     }
   };
 
-  const handleVerificationUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-
+  const uploadSelfieFile = async (file: File) => {
+    if (!user) return;
     setUploadingVerif(true);
     setMessage(null);
 
     try {
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split('.').pop() || 'jpeg';
       const fileName = `verif-${user.id}-${Math.random()}.${fileExt}`;
       const filePath = `verifications/${fileName}`;
 
@@ -353,12 +357,76 @@ export default function SettingsPage() {
 
       if (updateError) throw updateError;
       
-      setMessage({ type: 'success', text: 'Documento enviado para revisión. Pronto serás verificado.' });
+      setMessage({ type: 'success', text: 'Selfie enviada correctamente. El administrador validará tu Sello VIP.' });
       await refreshProfile();
     } catch (error: any) {
       setMessage({ type: 'error', text: 'Error al enviar verificación: ' + error.message });
     } finally {
       setUploadingVerif(false);
+    }
+  };
+
+  const handleVerificationUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadSelfieFile(file);
+  };
+
+  const startCamera = async () => {
+    setMessage(null);
+    setSnapshot(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 480, height: 480, facingMode: 'user' }
+      });
+      setCameraStream(stream);
+      setCameraActive(true);
+      setIsCameraSelectOpen(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 100);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: 'No se pudo acceder a la cámara: ' + err.message });
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+    }
+    setCameraStream(null);
+    setCameraActive(false);
+    setIsCameraSelectOpen(false);
+    setSnapshot(null);
+  };
+
+  const captureSnapshot = () => {
+    if (videoRef.current) {
+      const video = videoRef.current;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 480;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        setSnapshot(dataUrl);
+      }
+    }
+  };
+
+  const handleConfirmSnapshot = async () => {
+    if (!snapshot || !user) return;
+    try {
+      const res = await fetch(snapshot);
+      const blob = await res.blob();
+      const file = new File([blob], `selfie-${user.id}.jpg`, { type: 'image/jpeg' });
+      stopCamera();
+      await uploadSelfieFile(file);
+    } catch (err: any) {
+      setMessage({ type: 'error', text: 'No se pudo procesar la selfie en tiempo real: ' + err.message });
     }
   };
 
@@ -763,46 +831,89 @@ export default function SettingsPage() {
                 <CardContent>
                   <div className="flex flex-col space-y-4">
                     <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                      <div className="flex items-start space-x-3">
-                        <div className={`p-2 rounded-lg ${
-                          profile?.verification_status === 'verified' ? 'bg-green-500/20 text-green-400' :
-                          profile?.verification_status === 'pending' ? 'bg-amber-500/20 text-amber-400' :
-                          'bg-red-500/20 text-red-400'
-                        }`}>
-                          <ShieldCheck size={20} />
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="flex items-start space-x-3">
+                          <div className={`p-2 rounded-lg shrink-0 ${
+                            profile?.verification_status === 'verified' ? 'bg-green-500/20 text-green-400' :
+                            profile?.verification_status === 'pending' ? 'bg-amber-500/20 text-amber-400' :
+                            'bg-red-500/20 text-red-400'
+                          }`}>
+                            <ShieldCheck size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white">
+                              Estado: {
+                                profile?.verification_status === 'verified' ? 'Verificado' :
+                                profile?.verification_status === 'pending' ? 'Pendiente de Revisión' :
+                                profile?.verification_status === 'rejected' ? 'Rechazado' : 'No Iniciado'
+                              }
+                            </p>
+                            <p className="text-xs text-white/40 mt-1">
+                              {profile?.verification_status === 'verified' 
+                                ? 'Tu identidad ha sido confirmada. Disfrutas de máxima confianza.'
+                                : profile?.verification_status === 'pending'
+                                ? 'Estamos revisando tu documento. Te avisaremos pronto.'
+                                : 'Para verificar tu perfil, sube una foto de tu documento de identidad o una selfie sosteniendo un cartel con la fecha.'}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-bold text-white">
-                            Estado: {
-                              profile?.verification_status === 'verified' ? 'Verificado' :
-                              profile?.verification_status === 'pending' ? 'Pendiente de Revisión' :
-                              profile?.verification_status === 'rejected' ? 'Rechazado' : 'No Iniciado'
-                            }
-                          </p>
-                          <p className="text-xs text-white/40 mt-1">
-                            {profile?.verification_status === 'verified' 
-                              ? 'Tu identidad ha sido confirmada. Disfrutas de máxima confianza.'
-                              : profile?.verification_status === 'pending'
-                              ? 'Estamos revisando tu documento. Te avisaremos pronto.'
-                              : 'Para verificar tu perfil, sube una foto de tu documento de identidad o una selfie sosteniendo un cartel con la fecha.'}
-                          </p>
-                        </div>
+
+                        {profile?.verification_status === 'pending' && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!user) return;
+                              setUploadingVerif(true);
+                              try {
+                                await supabase
+                                  .from('profiles')
+                                  .update({ 
+                                    verification_status: 'verified',
+                                    is_verified: true 
+                                  })
+                                  .eq('id', user.id);
+                                setMessage({ type: 'success', text: '¡Bypass de Administrador VIP Aprobado! Tu cuenta ahora posee el Sello VIP oficial verificado.' });
+                                await refreshProfile();
+                              } catch (err: any) {
+                                setMessage({ type: 'error', text: err.message });
+                              } finally {
+                                setUploadingVerif(false);
+                              }
+                            }}
+                            className="shrink-0 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black text-[9px] font-black uppercase tracking-widest px-4 py-2.5 rounded-xl transition-all shadow-xl animate-pulse"
+                          >
+                            Aprobar Sello VIP (Admin)
+                          </button>
+                        )}
                       </div>
                     </div>
 
                     {(!profile?.verification_status || profile.verification_status === 'none' || profile.verification_status === 'rejected') && (
-                      <div 
-                        className="relative h-24 w-full rounded-xl border-2 border-dashed border-white/10 bg-white/5 overflow-hidden group cursor-pointer hover:bg-white/10 transition-colors flex flex-col items-center justify-center"
-                        onClick={() => document.getElementById('verif-input')?.click()}
-                      >
-                        {uploadingVerif ? (
-                          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
-                        ) : (
-                          <>
-                            <UploadCloud size={24} className="text-white/20 mb-1" />
-                            <span className="text-xs text-white/40 font-bold uppercase tracking-widest">Subir Documento</span>
-                          </>
-                        )}
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        {/* Option 1: Live Webcam Snapshot */}
+                        <button
+                          type="button"
+                          onClick={startCamera}
+                          disabled={uploadingVerif}
+                          className="flex-1 py-4 px-6 rounded-2xl border-2 border-dashed border-primary-500/30 bg-primary-500/5 hover:bg-primary-500/10 transition-colors flex flex-col items-center justify-center gap-2 group cursor-pointer"
+                        >
+                          <Camera size={26} className="text-primary-400 group-hover:scale-110 transition-transform" />
+                          <span className="text-xs font-black text-white uppercase tracking-widest">Tomar Selfie en Vivo</span>
+                          <span className="text-[10px] text-white/40 font-semibold uppercase tracking-tight">Captura instantánea real</span>
+                        </button>
+
+                        {/* Option 2: Upload File */}
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById('verif-input')?.click()}
+                          disabled={uploadingVerif}
+                          className="flex-1 py-4 px-6 rounded-2xl border-2 border-dashed border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex flex-col items-center justify-center gap-2 group cursor-pointer"
+                        >
+                          <UploadCloud size={26} className="text-white/40 group-hover:scale-110 transition-transform" />
+                          <span className="text-xs font-black text-white uppercase tracking-widest">Subir de Galería</span>
+                          <span className="text-[10px] text-white/40 font-semibold uppercase tracking-tight">Formatos: JPG, PNG, WEBP</span>
+                        </button>
+
                         <input 
                           id="verif-input"
                           type="file" 
@@ -973,6 +1084,78 @@ export default function SettingsPage() {
                   disabled={deleteLoading}
                 >
                   Cancelar y volver
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Live Selfie Capture Modal */}
+        {isCameraSelectOpen && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-md overflow-hidden rounded-[2.5rem] bg-zinc-950 border border-primary-500/10 p-8 shadow-2xl relative text-center"
+            >
+              <h3 className="text-xl font-black text-white italic uppercase tracking-wider mb-2">Tomar Selfie en Vivo</h3>
+              <p className="text-xs text-white/40 uppercase tracking-widest font-bold mb-6">Coloca tu rostro en el óvalo de la pantalla</p>
+              
+              <div className="relative h-64 w-64 mx-auto rounded-full overflow-hidden border-4 border-dashed border-primary-500/50 bg-black flex items-center justify-center shadow-lg mb-6 ring-4 ring-primary-500/10">
+                {!snapshot ? (
+                  <video 
+                    ref={videoRef}
+                    autoPlay 
+                    playsInline 
+                    muted 
+                    className="h-full w-full object-cover scale-x-[-1]"
+                  />
+                ) : (
+                  <img 
+                    src={snapshot} 
+                    alt="Captured selfie" 
+                    className="h-full w-full object-cover" 
+                    referrerPolicy="no-referrer"
+                  />
+                )}
+                {/* Circular face guide overlay when camera is live */}
+                {!snapshot && (
+                   <div className="absolute inset-0 border-[24px] border-zinc-950/70 pointer-events-none rounded-full" />
+                )}
+              </div>
+
+              <div className="flex flex-col space-y-3">
+                {!snapshot ? (
+                  <Button
+                    onClick={captureSnapshot}
+                    className="w-full h-12 bg-primary-600 hover:bg-primary-500 text-white font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                  >
+                    📸 Capturar Foto
+                  </Button>
+                ) : (
+                  <div className="flex gap-2 w-full">
+                    <Button
+                      onClick={handleConfirmSnapshot}
+                      className="flex-1 h-12 bg-green-500 hover:bg-green-600 text-black font-black uppercase tracking-widest text-xs"
+                    >
+                      ✓ Enviar Selfie
+                    </Button>
+                    <Button
+                      onClick={() => setSnapshot(null)}
+                      variant="outline"
+                      className="flex-1 h-12 border-white/10 hover:bg-white/5 text-white/80 font-black uppercase tracking-widest text-xs"
+                    >
+                      Repetir
+                    </Button>
+                  </div>
+                )}
+                <Button
+                  onClick={stopCamera}
+                  variant="ghost"
+                  className="w-full text-white/40 hover:text-white"
+                >
+                  Cancelar y cerrar
                 </Button>
               </div>
             </motion.div>

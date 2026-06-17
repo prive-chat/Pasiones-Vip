@@ -53,12 +53,12 @@ export default function UserProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [viewerMedia, setViewerMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null);
   const [followStatus, setFollowStatus] = useState<'none' | 'pending' | 'accepted'>('none');
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, profile: currentUserProfile } = useAuth();
   const isMe = currentUser?.id === userId;
   const observerTarget = useRef(null);
   const addToast = useNotificationStore((state) => state.addToast);
 
-  const [activeTab, setActiveTab] = useState<'posts' | 'reviews' | 'about'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'reviews' | 'agenda' | 'about'>('posts');
   const [isTipModalOpen, setIsTipModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   
@@ -356,10 +356,11 @@ export default function UserProfilePage() {
         <div className="mb-8 h-px bg-white/10" />
 
         {/* Tabs */}
-        <div className="flex items-center space-x-8 mb-8 overflow-x-auto pb-2 scrollbar-none">
+        <div className="flex items-center space-x-8 mb-8 overflow-x-auto pb-2 scrollbar-none text-white">
           {[
             { id: 'posts', label: 'Publicaciones', icon: LayoutGrid },
             { id: 'reviews', label: 'Reseñas', icon: Star },
+            { id: 'agenda', label: 'Agenda VIP', icon: Calendar },
             { id: 'about', label: 'Información', icon: UserIcon },
           ].map((tab) => (
             <button
@@ -492,6 +493,267 @@ export default function UserProfilePage() {
                   <Star size={40} className="text-white/10 mb-4" />
                   <p className="text-white/40 font-bold uppercase tracking-widest text-xs italic">Aún no hay reseñas para este usuario.</p>
                 </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'agenda' && (
+            <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in duration-500 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-black text-white italic uppercase">Agenda y Reservas VIP</h2>
+                  <p className="text-xs text-white/40 uppercase tracking-widest font-bold">Reserva de citas seguras y discretas 100%</p>
+                </div>
+              </div>
+
+              {isMe ? (
+                // Owner view: see requested appointments
+                <div className="space-y-6">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-widest italic px-1">Solicitudes de Citas Recibidas</h3>
+                  {(() => {
+                    const allBookings = JSON.parse(localStorage.getItem('pasiones_vip_bookings') || '[]');
+                    const myBookings = allBookings.filter((b: any) => b.profileId === profile?.id);
+                    
+                    if (myBookings.length === 0) {
+                      return (
+                        <div className="flex flex-col items-center justify-center py-12 text-center bg-white/5 rounded-2xl border border-white/5">
+                          <Calendar size={40} className="text-white/10 mb-4" />
+                          <p className="text-white/40 font-bold uppercase tracking-widest text-xs italic">Aún no has recibido solicitudes de citas.</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="grid grid-cols-1 gap-4">
+                        {myBookings.map((b: any) => (
+                          <Card key={b.id} className="p-6 glass-card border-none flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-black text-white">{b.clientName || 'Cliente Discreto'}</span>
+                                <span className={cn(
+                                  "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border",
+                                  b.status === 'accepted' ? "bg-green-500/10 text-green-400 border-green-500/20" :
+                                  b.status === 'rejected' ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                                  "bg-amber-500/10 text-amber-500 border-amber-500/20 animate-pulse"
+                                )}>
+                                  {b.status === 'accepted' ? 'Aceptada' : b.status === 'rejected' ? 'Rechazada' : 'Pendiente'}
+                                </span>
+                              </div>
+                              <div className="text-xs text-white/60 flex flex-wrap gap-x-4 gap-y-1 font-mono">
+                                <span className="text-primary-400 font-bold">📅 {b.date}</span>
+                                <span className="text-primary-400 font-bold">🕒 {b.slot}</span>
+                              </div>
+                              {b.notes && (
+                                <p className="text-xs text-white/50 italic bg-black/20 p-2.5 rounded-xl border border-white/5 mt-1">
+                                  "{b.notes}"
+                                </p>
+                              )}
+                            </div>
+
+                            {b.status === 'pending' && (
+                              <div className="flex items-center gap-2 shrink-0 md:justify-end">
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    const updated = allBookings.map((item: any) => item.id === b.id ? { ...item, status: 'accepted' } : item);
+                                    localStorage.setItem('pasiones_vip_bookings', JSON.stringify(updated));
+                                    addToast({ type: 'success', message: 'Cita Aceptada', description: 'Has aceptado la reservación. Se notificará al cliente.' });
+                                    setActiveTab('agenda'); // Force re-render
+                                  }}
+                                  className="bg-green-500 hover:bg-green-600 text-black font-black uppercase tracking-widest text-[9px] h-9 px-3"
+                                >
+                                  Aceptar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    const updated = allBookings.map((item: any) => item.id === b.id ? { ...item, status: 'rejected' } : item);
+                                    localStorage.setItem('pasiones_vip_bookings', JSON.stringify(updated));
+                                    addToast({ type: 'info', message: 'Cita Rechazada', description: 'Has rechazado la reservación.' });
+                                    setActiveTab('agenda'); // Force re-render
+                                  }}
+                                  className="border-red-500/30 hover:bg-red-500/10 text-red-400 font-black uppercase tracking-widest text-[9px] h-9 px-3"
+                                >
+                                  Rechazar
+                                </Button>
+                              </div>
+                            )}
+                          </Card>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : (
+                // Visitor view: book scheduling
+                <Card className="glass-card border-none p-6 md:p-8">
+                  <h3 className="text-lg font-bold text-white mb-6 uppercase tracking-widest italic">Nueva Solicitud de Cita Discreta</h3>
+                  
+                  {(() => {
+                    const [bookingDay, setBookingDay] = useState('');
+                    const [bookingSlot, setBookingSlot] = useState('Noche/VIP (19:00 - 02:00)');
+                    const [bookingNotes, setBookingNotes] = useState('');
+                    
+                    // Generate next 7 days starting from tomorrow
+                    const days = Array.from({ length: 7 }).map((_, i) => {
+                      const d = new Date();
+                      d.setDate(d.getDate() + 1 + i);
+                      return {
+                        fullStr: d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }),
+                        dayNum: d.getDate(),
+                        dayName: d.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase(),
+                        dateKey: d.toISOString().split('T')[0]
+                      };
+                    });
+
+                    // Set default booking day if empty
+                    if (!bookingDay && days.length > 0) {
+                      setBookingDay(days[0].fullStr);
+                    }
+
+                    const handleCreateBooking = () => {
+                      if (!currentUser) {
+                        addToast({ type: 'error', message: 'Inicia Sesión', description: 'Debes tener una cuenta registrada para reservar.' });
+                        return;
+                      }
+
+                      const allBookings = JSON.parse(localStorage.getItem('pasiones_vip_bookings') || '[]');
+                      
+                      // Check for duplicates
+                      if (allBookings.some((b: any) => b.profileId === profile?.id && b.clientId === currentUser?.id && b.date === bookingDay && b.status === 'pending')) {
+                        addToast({ type: 'info', message: 'Reserva Existente', description: 'Ya tienes una reserva pendiente para esta fecha.' });
+                        return;
+                      }
+
+                      const newBooking = {
+                        id: 'book-' + Math.random().toString(36).substr(2, 9),
+                        profileId: profile?.id,
+                        clientId: currentUser.id,
+                        clientName: currentUserProfile?.full_name || currentUserProfile?.username || currentUser?.email || 'Cliente VIP',
+                        date: bookingDay,
+                        slot: bookingSlot,
+                        notes: bookingNotes,
+                        status: 'pending',
+                        created_at: Date.now()
+                      };
+
+                      allBookings.push(newBooking);
+                      localStorage.setItem('pasiones_vip_bookings', JSON.stringify(allBookings));
+                      
+                      addToast({
+                        type: 'success',
+                        message: '¡Cita Reservada Enviada!',
+                        description: `Tu solicitud para el ${bookingDay} está pendiente de aprobación.`
+                      });
+                      
+                      setBookingNotes('');
+                      setActiveTab('agenda'); // Force re-render
+                    };
+
+                    const visitorBookings = JSON.parse(localStorage.getItem('pasiones_vip_bookings') || '[]')
+                      .filter((b: any) => b.profileId === profile?.id && b.clientId === currentUser?.id);
+
+                    return (
+                      <div className="space-y-6">
+                        {/* Day selector */}
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-black text-white/40 uppercase tracking-widest italic ml-1">1. Selecciona la Fecha</label>
+                          <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                            {days.map((day) => (
+                              <button
+                                key={day.dateKey}
+                                type="button"
+                                onClick={() => setBookingDay(day.fullStr)}
+                                className={cn(
+                                  "py-3 px-1 rounded-xl flex flex-col items-center justify-center border transition-all duration-300",
+                                  bookingDay === day.fullStr
+                                    ? "bg-primary-600 border-primary-500 scale-105 shadow-lg shadow-primary-600/30 font-black"
+                                    : "bg-white/5 border-white/5 hover:border-white/10 hover:bg-white/10 text-white/70"
+                                )}
+                              >
+                                <span className="text-[9px] font-bold text-white/30 uppercase">{day.dayName}</span>
+                                <span className={cn("text-lg font-black mt-0.5", bookingDay === day.fullStr ? 'text-white' : 'text-white/80')}>{day.dayNum}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Slot selector */}
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-black text-white/40 uppercase tracking-widest italic ml-1">2. Jornada / Turno deseado</label>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            {[
+                              'Mañana (09:00 - 13:00)',
+                              'Tarde (14:00 - 18:00)',
+                              'Noche/VIP (19:00 - 02:00)'
+                            ].map((slot) => (
+                              <button
+                                key={slot}
+                                type="button"
+                                onClick={() => setBookingSlot(slot)}
+                                className={cn(
+                                  "py-3 px-4 rounded-xl text-xs font-bold border text-center transition-all",
+                                  bookingSlot === slot
+                                    ? "bg-primary-600/25 border-primary-500 text-white shadow-md font-black"
+                                    : "bg-white/5 border-white/5 text-white/40 hover:text-white/60"
+                                )}
+                              >
+                                {slot}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Description notes */}
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-black text-white/40 uppercase tracking-[0.15em] italic ml-1">3. Detalles adicionales (opcional)</label>
+                          <textarea
+                            value={bookingNotes}
+                            onChange={(e) => setBookingNotes(e.target.value)}
+                            placeholder="Detalles sobre el punto de encuentro, duración deseada o preferencias..."
+                            className="w-full min-h-[100px] rounded-2xl bg-white/5 border border-white/10 p-4 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all resize-none italic"
+                          />
+                        </div>
+
+                        <Button
+                          onClick={handleCreateBooking}
+                          className="w-full h-12 bg-primary-600 hover:bg-primary-500 text-white font-black uppercase text-xs italic tracking-widest"
+                        >
+                          Solicitar Reserva Discreta 🔒
+                        </Button>
+
+                        {/* Client history with this creator */}
+                        {visitorBookings.length > 0 && (
+                          <div className="pt-6 border-t border-white/10 mt-6">
+                            <h4 className="text-xs font-black text-white/40 uppercase tracking-widest mb-4">Mis reservas anteriores con {profile?.full_name?.split(' ')[0]}</h4>
+                            <div className="space-y-3">
+                              {visitorBookings.map((vb: any) => (
+                                <div key={vb.id} className="p-3 bg-white/5 border border-white/5 rounded-xl flex items-center justify-between text-xs">
+                                  <div className="space-y-0.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-bold text-white">📅 {vb.date}</span>
+                                      <span className="text-white/40 font-mono">({vb.slot})</span>
+                                    </div>
+                                    {vb.notes && <p className="text-[10px] text-white/30 truncate max-w-xs italic">"{vb.notes}"</p>}
+                                  </div>
+                                  <span className={cn(
+                                    "font-black tracking-widest text-[8px] uppercase px-2 py-0.5 rounded border shrink-0",
+                                    vb.status === 'accepted' ? "bg-green-500/10 text-green-400 border-green-500/20" :
+                                    vb.status === 'rejected' ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                                    "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                  )}>
+                                    {vb.status === 'accepted' ? 'Aceptada' : vb.status === 'rejected' ? 'Rechazada' : 'Pendiente'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </Card>
               )}
             </div>
           )}

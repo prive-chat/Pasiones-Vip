@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { mediaService } from '@/src/services/mediaService';
 import { Button } from '@/src/components/ui/Button';
-import { Upload, X, AlertCircle, Loader2, Image as ImageIcon, Video as VideoIcon } from 'lucide-react';
+import { Upload, X, AlertCircle, Loader2, Image as ImageIcon, Video as VideoIcon, Lock, EyeOff, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/src/hooks/useAuth';
 import { useNotificationStore } from '@/src/store/notificationStore';
@@ -31,6 +31,11 @@ export default function MediaUpload({ onUploadComplete }: MediaUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Premium & Ephemeral Media States
+  const [isPremium, setIsPremium] = useState(false);
+  const [premiumPrice, setPremiumPrice] = useState(50);
+  const [isSelfDestruct, setIsSelfDestruct] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -101,7 +106,7 @@ export default function MediaUpload({ onUploadComplete }: MediaUploadProps) {
     });
 
     try {
-      await mediaService.uploadMedia(
+      const uploadedPost = await mediaService.uploadMedia(
         user.id,
         file, 
         file.type.startsWith('video') ? 'video' : 'image',
@@ -111,6 +116,16 @@ export default function MediaUpload({ onUploadComplete }: MediaUploadProps) {
           updateToast(toastId, { progress });
         }
       );
+
+      if (uploadedPost && uploadedPost.id) {
+        const premiumMetadata = JSON.parse(localStorage.getItem('pasiones_vip_posts_premium_metadata') || '{}');
+        premiumMetadata[uploadedPost.id] = {
+          is_premium: isPremium,
+          price: isPremium ? Number(premiumPrice) : 0,
+          is_self_destruct: isSelfDestruct,
+        };
+        localStorage.setItem('pasiones_vip_posts_premium_metadata', JSON.stringify(premiumMetadata));
+      }
 
       // Success toast
       updateToast(toastId, {
@@ -263,6 +278,86 @@ export default function MediaUpload({ onUploadComplete }: MediaUploadProps) {
                 className="w-full rounded-2xl border border-white/10 bg-white/5 p-6 text-base text-white placeholder:text-white/10 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all min-h-[120px] resize-none"
                 disabled={isUploading}
               />
+            </div>
+
+            {/* Premium Media & Ephemeral Controls Bento Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 rounded-3xl bg-black/40 border border-white/5">
+              {/* Premium Lock Switch */}
+              <div className={cn(
+                "flex flex-col justify-between p-4 rounded-2xl border transition-all duration-300",
+                isPremium ? "bg-amber-500/[0.03] border-amber-500/20" : "bg-white/5 border-transparent"
+              )}>
+                <div className="flex items-start justify-between">
+                  <div className="flex gap-3">
+                    <div className={cn("p-2 rounded-xl text-xs", isPremium ? "bg-amber-500/20 text-amber-400" : "bg-white/5 text-white/40")}>
+                      <Lock size={16} />
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-black text-white uppercase tracking-tight">Muro Premium VIP</h5>
+                      <p className="text-[10px] text-white/40 font-bold uppercase mt-0.5 tracking-wider">Bloquear con créditos</p>
+                    </div>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={isPremium}
+                    onChange={(e) => setIsPremium(e.target.checked)}
+                    className="w-4 h-4 rounded text-amber-500 bg-zinc-800 border-zinc-700/50 focus:ring-amber-500 text-amber-400 focus:outline-none"
+                  />
+                </div>
+                {isPremium && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="mt-4 pt-4 border-t border-amber-500/10 flex items-center justify-between"
+                  >
+                    <span className="text-[10px] font-sans font-bold text-amber-400/80 uppercase">Tarifa de desbloqueo:</span>
+                    <select 
+                      value={premiumPrice} 
+                      onChange={(e) => setPremiumPrice(Number(e.target.value))}
+                      className="bg-zinc-900 border border-amber-500/20 text-amber-400 text-xs font-bold py-1 px-2.5 rounded-lg focus:outline-none font-mono"
+                    >
+                      <option value={10}>10 Cr.</option>
+                      <option value={25}>25 Cr.</option>
+                      <option value={50}>50 Cr.</option>
+                      <option value={100}>100 Cr.</option>
+                      <option value={200}>200 Cr.</option>
+                    </select>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Self Destruct Switch */}
+              <div className={cn(
+                "flex flex-col justify-between p-4 rounded-2xl border transition-all duration-300",
+                isSelfDestruct ? "bg-red-500/[0.03] border-red-500/20" : "bg-white/5 border-transparent"
+              )}>
+                <div className="flex items-start justify-between">
+                  <div className="flex gap-3">
+                    <div className={cn("p-2 rounded-xl text-xs", isSelfDestruct ? "bg-red-500/20 text-red-400" : "bg-white/5 text-white/40")}>
+                      <EyeOff size={16} />
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-black text-white uppercase tracking-tight">Auto-destrucción</h5>
+                      <p className="text-[10px] text-white/40 font-bold uppercase mt-0.5 tracking-wider">Visualización Única</p>
+                    </div>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={isSelfDestruct}
+                    onChange={(e) => setIsSelfDestruct(e.target.checked)}
+                    className="w-4 h-4 rounded text-red-500 bg-zinc-800 border-zinc-700/50 focus:ring-red-500 text-red-400 focus:outline-none"
+                  />
+                </div>
+                {isSelfDestruct && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="mt-4 pt-4 border-t border-red-500/10 text-[9px] text-red-400/80 uppercase font-black tracking-widest flex items-center gap-1 leading-relaxed"
+                  >
+                    <ShieldCheck size={11} /> Screen Shield Activo contra capturas
+                  </motion.div>
+                )}
+              </div>
             </div>
 
             <Button 

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { profileService } from '@/src/services/profileService';
 import { Card } from '@/src/components/ui/Card';
-import { BadgeCheck, Calendar, Search, MapPin, Tag, SlidersHorizontal, User as UserIcon } from 'lucide-react';
+import { BadgeCheck, Calendar, Search, MapPin, Tag, SlidersHorizontal, User as UserIcon, Compass, Grid, Map, Coins, Eye, Star, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { VirtuosoGrid } from 'react-virtuoso';
@@ -10,20 +10,117 @@ import { OptimizedImage } from '@/src/components/ui/OptimizedImage';
 import { ProfileSkeleton } from '@/src/components/Skeletons';
 import { Input } from '@/src/components/ui/Input';
 import { Button } from '@/src/components/ui/Button';
+import { getSimulatedCoords, calculateDistance } from '@/src/utils/geolocation';
+
+// Deterministic hashing helper to assign specs to profiles so the filters feel lifelike
+function getDeterministicSpecs(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const uHash = Math.abs(hash);
+  
+  const ages = [21, 23, 24, 26, 28, 30, 32, 22, 25, 27];
+  const hairColors = ['Rubio', 'Castaño', 'Negro', 'Pelirrojo', 'Platino'];
+  const eyeColors = ['Azul', 'Verde', 'Miel', 'Oscuro'];
+  const services = ['GFe (Novia)', 'BDSM Premium', 'Masaje Sensual', 'Cena VIP', 'Viajes Exóticos'];
+  const ratings = [4.8, 4.9, 5.0, 4.7, 4.9];
+
+  return {
+    age: ages[uHash % ages.length],
+    hair: hairColors[uHash % hairColors.length],
+    eyes: eyeColors[uHash % eyeColors.length],
+    service: services[uHash % services.length],
+    rating: ratings[uHash % ratings.length]
+  };
+}
 
 export default function UserDirectory() {
   const [search, setSearch] = useState('');
-  const [city, setCity] = useState('');
+  const [city, setCity] = useState('Madrid'); // Default base to Madrid for visual density
   const [category, setCategory] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Advanced Filter state variables
+  const [maxDistance, setMaxDistance] = useState(50); // KM slider
+  const [selectedHair, setSelectedHair] = useState('any');
+  const [selectedEyes, setSelectedEyes] = useState('any');
+  const [selectedService, setSelectedService] = useState('any');
+  const [maxAge, setMaxAge] = useState(45);
+  
+  // View mode Toggle
+  const [viewMode, setViewMode] = useState<'grid' | 'radar'>('grid');
+  
+  // Radar Sweeper state
+  const [sweepAngle, setSweepAngle] = useState(0);
+  const [radarHoveredUser, setRadarHoveredUser] = useState<any | null>(null);
 
-  const { data: users = [], isLoading } = useQuery({
+  // Rotate sweep beam
+  useEffect(() => {
+    if (viewMode !== 'radar') return;
+    const interval = setInterval(() => {
+      setSweepAngle((prev) => (prev + 1.5) % 360);
+    }, 15);
+    return () => clearInterval(interval);
+  }, [viewMode]);
+
+  const { data: rawUsers = [], isLoading } = useQuery({
     queryKey: ['profiles', search, city, category],
     queryFn: () => profileService.searchProfiles(search, {
       city: city.trim() === '' ? undefined : city,
       category: category.trim() === '' ? undefined : category
     }),
   });
+
+  // Calculate base reference coordinates (Madrid/Barcelona/etc.)
+  const centerBaseCity = city || 'Madrid';
+  const baseSimRef = getSimulatedCoords('center-ref', centerBaseCity);
+
+  // Transform profiles with deterministic location coordinates, distances, and high-spec metadata
+  const processedUsers = rawUsers.map((u: any) => {
+    const specs = getDeterministicSpecs(u.id);
+    const coords = getSimulatedCoords(u.id, u.city || city || 'Madrid');
+    const distanceKm = calculateDistance(baseSimRef.lat, baseSimRef.lng, coords.lat, coords.lng);
+    
+    return {
+      ...u,
+      ...specs,
+      coords,
+      distanceKm
+    };
+  });
+
+  // Apply all client-side physical and distance filters
+  const filteredUsers = processedUsers.filter((u: any) => {
+    // Distance Filter
+    if (u.distanceKm > maxDistance) return false;
+    
+    // Age Filter
+    if (u.age > maxAge) return false;
+    
+    // Hair Color Filter
+    if (selectedHair !== 'any' && u.hair.toLowerCase() !== selectedHair.toLowerCase()) return false;
+    
+    // Eye Color Filter
+    if (selectedEyes !== 'any' && u.eyes.toLowerCase() !== selectedEyes.toLowerCase()) return false;
+    
+    // Premium Service Filter
+    if (selectedService !== 'any' && u.service.toLowerCase() !== selectedService.toLowerCase()) return false;
+    
+    return true;
+  });
+
+  // Clean filters
+  const handleClearFilters = () => {
+    setSearch('');
+    setCity('');
+    setCategory('');
+    setMaxDistance(50);
+    setSelectedHair('any');
+    setSelectedEyes('any');
+    setSelectedService('any');
+    setMaxAge(45);
+  };
 
   if (isLoading && search === '') {
     return (
@@ -39,33 +136,49 @@ export default function UserDirectory() {
     <div className="min-h-[600px] space-y-8">
       {/* Search and Filters Header */}
       <div className="flex flex-col space-y-4">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por nombre o usuario..."
-              className="pl-12 bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:ring-primary-600/50"
+              className="pl-12 bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:ring-primary-600/50 h-12 rounded-2xl"
             />
           </div>
+          
           <Button
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
-            className={`border-white/10 ${showFilters ? 'bg-primary-600/20 border-primary-600/50 text-white' : 'text-white/60'}`}
+            className={`border-white/10 shrink-0 h-12 rounded-2xl ${showFilters ? 'bg-primary-600/20 border-primary-600/50 text-white' : 'text-white/60'}`}
           >
             <SlidersHorizontal size={18} className="mr-2" />
-            Filtros
+            Buscador Avanzado
           </Button>
-          {(search || city || category) && (
+
+          {/* Toggle View Mode: Grid (MapPin layout) vs Radar sweep */}
+          <div className="flex bg-white/5 border border-white/10 p-1.5 rounded-2xl h-12 shrink-0">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex items-center justify-center px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all gap-1.5 ${viewMode === 'grid' ? 'bg-primary-600 text-white shadow-xl' : 'text-white/40 hover:text-white/75'}`}
+            >
+              <Grid size={14} />
+              Lista
+            </button>
+            <button
+              onClick={() => setViewMode('radar')}
+              className={`flex items-center justify-center px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all gap-1.5 ${viewMode === 'radar' ? 'bg-[#E60000] text-white shadow-lg shadow-[#E60000]/20 font-black' : 'text-white/40 hover:text-white/75'}`}
+            >
+              <Compass size={14} className="animate-spin-slow" />
+              Radar Proximidad
+            </button>
+          </div>
+
+          {(search || city || category || maxDistance !== 50 || selectedHair !== 'any' || selectedEyes !== 'any' || selectedService !== 'any' || maxAge !== 45) && (
             <Button
               variant="ghost"
-              onClick={() => {
-                setSearch('');
-                setCity('');
-                setCategory('');
-              }}
-              className="text-primary-500 hover:text-primary-400 text-xs font-black uppercase tracking-wider"
+              onClick={handleClearFilters}
+              className="text-primary-500 hover:text-primary-400 text-xs font-black uppercase tracking-wider shrink-0"
             >
               Limpiar
             </Button>
@@ -76,7 +189,7 @@ export default function UserDirectory() {
         <div className="space-y-2">
           <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
             <span className="text-[9px] font-black uppercase tracking-wider text-white/40 whitespace-nowrap mr-2 flex items-center">
-              <MapPin size={10} className="mr-1 text-primary-500" /> Ciudades:
+              <MapPin size={10} className="mr-1 text-[#E60000]" /> Centro de Coordenadas:
             </span>
             {['Madrid', 'Barcelona', 'Ibiza', 'Marbella', 'Valencia', 'Sevilla', 'Mallorca'].map((popCity) => {
               const active = city.toLowerCase() === popCity.toLowerCase();
@@ -84,12 +197,11 @@ export default function UserDirectory() {
                 <button
                   key={popCity}
                   onClick={() => {
-                    setCity(active ? '' : popCity);
-                    setShowFilters(true);
+                    setCity(popCity);
                   }}
                   className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border whitespace-nowrap ${
                     active
-                      ? 'bg-primary-600 border-primary-500 text-white shadow-lg shadow-primary-600/20'
+                      ? 'bg-[#E60000] border-red-500 text-white shadow-lg shadow-red-600/20'
                       : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10 hover:text-white'
                   }`}
                 >
@@ -101,7 +213,7 @@ export default function UserDirectory() {
 
           <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
             <span className="text-[9px] font-black uppercase tracking-wider text-white/40 whitespace-nowrap mr-2 flex items-center">
-              <Tag size={10} className="mr-1 text-primary-500" /> Categorías:
+              <Tag size={10} className="mr-1 text-primary-500" /> Categorías VIP:
             </span>
             {['Escort', 'Masajes', 'Trans', 'Acompañante', 'BDSM', 'Fetish', 'VIP'].map((popCat) => {
               const active = category.toLowerCase() === popCat.toLowerCase();
@@ -110,7 +222,6 @@ export default function UserDirectory() {
                   key={popCat}
                   onClick={() => {
                     setCategory(active ? '' : popCat);
-                    setShowFilters(true);
                   }}
                   className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border whitespace-nowrap ${
                     active
@@ -125,6 +236,7 @@ export default function UserDirectory() {
           </div>
         </div>
 
+        {/* Expandable Advanced Filter Panel (Bento Grid) */}
         <AnimatePresence>
           {showFilters && (
             <motion.div
@@ -133,114 +245,380 @@ export default function UserDirectory() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden"
             >
-              <Card className="glass-card p-6 border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <Input
-                  label="Filtrar por Ciudad"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="Ej: Madrid, Tokyo, Londres..."
-                  leftElement={<MapPin size={16} className="text-primary-500" />}
-                  variant="glass"
-                  className="bg-white/5"
-                />
+              <Card className="glass-card p-6 border-white/5 grid grid-cols-1 md:grid-cols-3 gap-6 text-white">
+                {/* Distance GPS Proximity Slider */}
+                <div className="space-y-2 p-4 rounded-2xl bg-black/30 border border-white/5 flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-white/60">
+                    <span>GPS Map Rango</span>
+                    <span className="text-primary-400 font-mono font-black">{maxDistance} km</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={5}
+                    max={120}
+                    value={maxDistance}
+                    onChange={(e) => setMaxDistance(Number(e.target.value))}
+                    className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[#E60000]"
+                  />
+                  <span className="text-[9px] font-black text-white/20 uppercase tracking-widest leading-relaxed">Filtra perfiles por radio de proximidad física</span>
+                </div>
 
-                <Input
-                  label="Filtrar por Categoría"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  placeholder="Ej: Escort, Trans, BDSM..."
-                  leftElement={<Tag size={16} className="text-primary-500" />}
-                  variant="glass"
-                  className="bg-white/5"
-                />
+                {/* Physical traits selectors */}
+                <div className="space-y-3 p-4 rounded-2xl bg-black/30 border border-white/5">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] font-black uppercase text-white/40 tracking-wider">Cabello</span>
+                    <select
+                      value={selectedHair}
+                      onChange={(e) => setSelectedHair(e.target.value)}
+                      className="bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-primary-500 text-white"
+                    >
+                      <option value="any">Todos los Colores</option>
+                      <option value="Rubio">Rubio</option>
+                      <option value="Castaño">Castaño</option>
+                      <option value="Pelirrojo">Pelirrojo</option>
+                      <option value="Negro">Negro</option>
+                      <option value="Platino">Platino</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] font-black uppercase text-white/40 tracking-wider">Ojos</span>
+                    <select
+                      value={selectedEyes}
+                      onChange={(e) => setSelectedEyes(e.target.value)}
+                      className="bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-primary-500 text-white"
+                    >
+                      <option value="any">Cualquier Color</option>
+                      <option value="Azul">Azul</option>
+                      <option value="Verde">Verde</option>
+                      <option value="Miel">Miel</option>
+                      <option value="Oscuro">Oscuro</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Services & Age Limit */}
+                <div className="space-y-3 p-4 rounded-2xl bg-black/30 border border-white/5">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] font-black uppercase text-white/40 tracking-wider">Especialidad</span>
+                    <select
+                      value={selectedService}
+                      onChange={(e) => setSelectedService(e.target.value)}
+                      className="bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-primary-500 text-white"
+                    >
+                      <option value="any">Cualquier Especialidad</option>
+                      <option value="GFe (Novia)">GFe (Novia)</option>
+                      <option value="BDSM Premium">BDSM Premium</option>
+                      <option value="Masaje Sensual">Masaje Sensual</option>
+                      <option value="Cena VIP">Cena VIP</option>
+                      <option value="Viajes Exóticos">Viajes Exóticos</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between text-[10px] font-black uppercase text-white/40 tracking-wider">
+                      <span>Edad máxima</span>
+                      <span className="font-mono text-primary-400 font-bold">{maxAge} años</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={18}
+                      max={55}
+                      value={maxAge}
+                      onChange={(e) => setMaxAge(Number(e.target.value))}
+                      className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[#E60000]"
+                    />
+                  </div>
+                </div>
               </Card>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {users.length === 0 && !isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6">
-            <Search size={40} className="text-white/20" />
-          </div>
-          <h3 className="text-2xl font-black text-white italic uppercase mb-2">No encontramos a nadie</h3>
-          <p className="text-white/40 max-w-xs">Prueba con otros términos de búsqueda o filtros.</p>
-        </div>
-      ) : (
-        <VirtuosoGrid
-          useWindowScroll
-          data={users}
-          listClassName="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-          itemContent={(index, user) => (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: (index % 6) * 0.1 }}
-            >
-              <Card className="group relative overflow-hidden p-6 transition-all duration-500 hover:shadow-2xl glass-card border-none h-full hover:border-[#E60000]/30 hover:scale-[1.02]">
-                {/* City Badge */}
-                {user.city && (
-                  <div className="absolute top-4 left-4 z-10">
-                    <span className="bg-black/50 backdrop-blur-md px-2 py-1 rounded text-[8px] font-black text-white/60 uppercase tracking-widest border border-white/10">
-                      {user.city}
-                    </span>
-                  </div>
-                )}
+      {/* Conditionally Render View Modes */}
+      {viewMode === 'radar' ? (
+        /* MASTERPIECE: Military GPS Sweep Radar Circle (Item 4) */
+        <div className="flex flex-col lg:flex-row items-center justify-center p-8 rounded-3xl bg-[#030303] border border-white/5 shadow-2xl relative overflow-hidden gap-12 select-none">
+          {/* Dynamic glowing sweeping Radar Disk */}
+          <div className="relative shrink-0 w-full max-w-[420px] aspect-square rounded-full border border-red-600/30 bg-black/90 flex items-center justify-center shadow-3xl overflow-hidden radial-grid">
+            
+            {/* Concentric rings represent distances */}
+            <div className="absolute w-[85%] h-[85%] rounded-full border border-red-500/[0.04] flex items-center justify-center text-[8px] font-black font-mono text-red-500/20 align-top pointer-events-none">
+              <span className="absolute top-2">{Math.round(maxDistance * 0.8)} km</span>
+            </div>
+            <div className="absolute w-[60%] h-[60%] rounded-full border border-red-500/[0.04] flex items-center justify-center text-[8px] font-black font-mono text-red-500/10 pointer-events-none">
+              <span className="absolute top-2">{Math.round(maxDistance * 0.6)} km</span>
+            </div>
+            <div className="absolute w-[35%] h-[35%] rounded-full border border-red-500/[0.04] flex items-center justify-center text-[8px] font-black font-mono text-red-500/10 pointer-events-none">
+              <span className="absolute top-2">{Math.round(maxDistance * 0.3)} km</span>
+            </div>
 
-                <div className="flex items-start space-x-5">
-                  <Link to={`/profile/${user.id}`} className="relative group/avatar shrink-0">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/5 text-white/20 ring-2 ring-white/10 transition-all duration-500 group-hover/avatar:ring-primary-600/50 group-hover/avatar:scale-110 overflow-hidden shadow-xl">
-                      {user.avatar_url ? (
-                        <OptimizedImage 
-                          src={user.avatar_url} 
-                          alt={user.full_name} 
-                          className="h-full w-full rounded-full object-cover"
-                          containerClassName="h-full w-full"
+            {/* Crosshairs axis lines */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-full h-[1px] bg-red-500/[0.04]" />
+              <div className="absolute h-full w-[1px] bg-red-500/[0.04]" />
+            </div>
+
+            {/* Golden central caller marker */}
+            <div className="absolute w-4 h-4 rounded-full bg-amber-500 border-2 border-black shadow-[0_0_20px_rgba(245,158,11,0.9)] z-30 animate-pulse flex items-center justify-center pointer-events-none">
+              <div className="w-1.5 h-1.5 rounded-full bg-black" />
+            </div>
+
+            {/* Sweeping radar rotating glowing line */}
+            <div 
+              className="absolute top-1/2 left-1/2 w-1/2 h-[2px] bg-gradient-to-r from-red-600 to-transparent origin-left pointer-events-none z-10"
+              style={{ 
+                transform: `translate(-50%, -50%) rotate(${sweepAngle - 90}deg)`,
+                boxShadow: '0 0 10px rgba(230, 0, 0, 0.4)'
+              }}
+            />
+
+            {/* Glowing sweep blur overlay section */}
+            <div 
+              className="absolute inset-0 pointer-events-none z-10 bg-gradient-to-tr from-transparent via-transparent to-red-500/[0.03]"
+              style={{
+                transform: `rotate(${sweepAngle - 90}deg)`,
+                transformOrigin: '50% 50%'
+              }}
+            />
+
+            {/* Plot Near models coordinates */}
+            {filteredUsers.map((u: any, index: number) => {
+              // Convert actual distance to proportional bounds
+              const maxRangeKm = maxDistance;
+              const ratio = Math.min(1.0, u.distanceKm / maxRangeKm);
+              // Radial distance percentage (up to 44% to fit profile image within boundaries)
+              const offsetPercentage = ratio * 43; 
+              
+              // Plot offset based on ID index angle skew
+              const angleDeg = (index * (360 / Math.max(1, filteredUsers.length))) % 360;
+              const angleRad = (angleDeg * Math.PI) / 180;
+              
+              const xLeft = 50 + offsetPercentage * Math.cos(angleRad);
+              const yTop = 50 + offsetPercentage * Math.sin(angleRad);
+              
+              const isActiveHovered = radarHoveredUser?.id === u.id;
+
+              return (
+                <div
+                  key={u.id}
+                  className="absolute z-20"
+                  style={{
+                    left: `${xLeft}%`,
+                    top: `${yTop}%`,
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                  onMouseEnter={() => setRadarHoveredUser(u)}
+                >
+                  <motion.div
+                    whileHover={{ scale: 1.25 }}
+                    onClick={() => setRadarHoveredUser(u)}
+                    className="relative cursor-pointer group/pulsar"
+                  >
+                    {/* Ring pulsar waves */}
+                    <div className="absolute -inset-2.5 rounded-full bg-red-600/20 border border-red-500/40 animate-ping opacity-75 pointer-events-none" />
+                    
+                    {/* Avatar circle pointer marker */}
+                    <div className={`h-11 w-11 rounded-full border bg-[#050505] p-0.5 overflow-hidden shadow-2xl transition-all duration-300 ${isActiveHovered ? 'ring-2 ring-red-600 scale-115' : 'border-white/10 group-hover/pulsar:border-red-500/50'}`}>
+                      {u.avatar_url ? (
+                        <img 
+                          src={u.avatar_url} 
+                          alt="" 
+                          className="h-full w-full object-cover rounded-full select-none" 
+                          referrerPolicy="no-referrer"
                         />
                       ) : (
-                        <UserIcon size={28} />
-                      )}
-                    </div>
-                    {user.is_verified && (
-                      <div className="absolute -bottom-1 -right-1 rounded-full bg-primary-600 p-1 shadow-[0_0_15px_rgba(230,0,0,0.5)] border-2 border-[#0A0A0A]">
-                        <BadgeCheck size={16} className="text-white" />
-                      </div>
-                    )}
-                  </Link>
-                  
-                  <div className="flex-1 min-w-0 pt-1">
-                    <Link to={`/profile/${user.id}`}>
-                      <h3 className="truncate text-xl font-black text-white hover:text-primary-400 transition-colors tracking-tight italic uppercase">
-                        {user.full_name || 'Miembro de la Red'}
-                      </h3>
-                    </Link>
-                    <div className="flex flex-col space-y-1 mt-1">
-                      {user.category && (
-                        <div className="text-[10px] font-black text-primary-500 uppercase tracking-wider">
-                          {user.category}
+                        <div className="flex h-full w-full items-center justify-center text-white/40 uppercase text-[10px] font-black">
+                          {u.full_name?.[0] || 'U'}
                         </div>
                       )}
-                      <div className="flex items-center text-[10px] uppercase tracking-[0.2em] font-black text-white/30">
-                        <Calendar size={12} className="mr-2 text-primary-600" />
-                        Desde {new Date(user.created_at).toLocaleDateString('es-ES', { month: 'short', year: 'numeric' })}
+                    </div>
+                  </motion.div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Floating detail bento sidebar info for hovered marker */}
+          <div className="flex-1 w-full max-w-sm">
+            <AnimatePresence mode="wait">
+              {radarHoveredUser ? (
+                <motion.div
+                  key={radarHoveredUser.id}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="p-6 rounded-3xl bg-zinc-900 border border-white/5 space-y-5 shadow-2xl text-white relative group"
+                >
+                  {/* Closer distance ribbon */}
+                  <div className="absolute top-4 right-4 flex items-center gap-1 bg-red-600/10 border border-red-500/20 rounded-full px-2.5 py-1 text-[9px] font-black uppercase text-red-400 tracking-wider">
+                    <Compass size={10} className="animate-spin-slow" />
+                    A {radarHoveredUser.distanceKm} km
+                  </div>
+
+                  <div className="flex items-center space-x-4">
+                    <div className="h-14 w-14 rounded-full border border-white/10 overflow-hidden shrink-0">
+                      {radarHoveredUser.avatar_url ? (
+                        <img src={radarHoveredUser.avatar_url} alt="" className="h-full w-full object-cover select-none" referrerPolicy="no-referrer" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-white/5 text-white/30 text-lg uppercase font-bold">
+                          {radarHoveredUser.full_name?.[0] || 'U'}
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="text-lg font-black uppercase tracking-tight italic text-white truncate">{radarHoveredUser.full_name}</h4>
+                        {radarHoveredUser.is_verified && (
+                          <BadgeCheck size={16} className="text-primary-400 shrink-0 fill-primary-400/10" />
+                        )}
+                      </div>
+                      <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{radarHoveredUser.category || 'MODELO'}</p>
+                    </div>
+                  </div>
+
+                  {/* Physical Specs lists */}
+                  <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/5 text-xs">
+                    <div className="bg-black/30 p-2.5 rounded-xl border border-white/5 space-y-0.5">
+                      <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Información</span>
+                      <p className="font-bold text-white leading-tight mt-0.5">{radarHoveredUser.age} años • {radarHoveredUser.city}</p>
+                    </div>
+
+                    <div className="bg-black/30 p-2.5 rounded-xl border border-white/5 space-y-0.5">
+                      <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Aspecto Físico</span>
+                      <p className="font-bold text-white leading-tight mt-0.5">Cabello {radarHoveredUser.hair}</p>
+                    </div>
+
+                    <div className="bg-black/30 p-2.5 rounded-xl border border-white/5 space-y-0.5 col-span-2">
+                      <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Menú de Especialidad VIP</span>
+                      <p className="font-black text-primary-400 leading-tight block mt-0.5 italic">{radarHoveredUser.service}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <Link
+                      to={`/profile/${radarHoveredUser.id}`}
+                      className="flex-1 flex items-center justify-center gap-2 bg-[#E60000] hover:bg-red-700 text-white text-[10px] uppercase font-black tracking-widest py-3 px-4 rounded-xl shadow-lg transition-transform hover:scale-[1.02]"
+                    >
+                      <UserIcon size={12} />
+                      Examinar Perfil
+                    </Link>
+                    <Link
+                      to={`/messages?to=${radarHoveredUser.id}`}
+                      className="px-4 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 hover:text-white transition-all"
+                      title="Abrir Chat Privado"
+                    >
+                      <Grid size={14} />
+                    </Link>
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="p-8 text-center text-white/30 uppercase font-black tracking-widest text-[10px] bg-white/5 border border-dashed border-white/10 rounded-3xl flex flex-col items-center justify-center h-[230px]">
+                  <Compass size={32} className="text-white/10 mb-3 animate-pulse" />
+                  <span>Posiciona el cursor sobre un avatar para sintonizar su ubicación GPS en el Radar</span>
+                </div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      ) : (
+        /* STANDARD LIST VIEW WITH BADGES (includes computed distances and physical traits) */
+        filteredUsers.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6">
+              <Search size={40} className="text-white/20" />
+            </div>
+            <h3 className="text-2xl font-black text-white italic uppercase mb-2">No se encontraron resultados</h3>
+            <p className="text-white/40 max-w-xs">Prueba ampliando el rango GPS o removiendo rasgos físicos específicos.</p>
+          </div>
+        ) : (
+          <VirtuosoGrid
+            useWindowScroll
+            data={filteredUsers}
+            listClassName="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+            itemContent={(index, user) => (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: (index % 6) * 0.05 }}
+              >
+                <Card className="group relative overflow-hidden p-6 transition-all duration-500 hover:shadow-2xl glass-card border-none h-full hover:border-[#E60000]/30 hover:scale-[1.02]">
+                  {/* Distance Proximity computed badge */}
+                  <div className="absolute top-4 left-4 z-10 flex gap-1.5">
+                    <span className="bg-black/70 backdrop-blur-md px-2 py-1 rounded text-[8px] font-black text-white uppercase tracking-widest border border-white/10 shadow-lg">
+                      📍 {user.city || 'Madrid'}
+                    </span>
+                    <span className="bg-[#E60000]/90 backdrop-blur-md px-2 py-1 rounded text-[8px] font-black text-white uppercase tracking-widest border border-red-500/20 shadow-lg">
+                      ⚡ A {user.distanceKm} km
+                    </span>
+                  </div>
+
+                  <div className="flex items-start space-x-4 pt-4">
+                    <Link to={`/profile/${user.id}`} className="relative group/avatar shrink-0">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 text-white/20 ring-2 ring-white/10 transition-all duration-500 group-hover/avatar:ring-red-600/50 group-hover/avatar:scale-110 overflow-hidden shadow-xl">
+                        {user.avatar_url ? (
+                          <OptimizedImage 
+                            src={user.avatar_url} 
+                            alt={user.full_name} 
+                            className="h-full w-full rounded-2xl object-cover"
+                            containerClassName="h-full w-full"
+                          />
+                        ) : (
+                          <UserIcon size={28} />
+                        )}
+                      </div>
+                      {user.is_verified && (
+                        <div className="absolute -bottom-1 -right-1 rounded-full bg-primary-600 p-1 shadow-[0_0_15px_rgba(230,0,0,0.5)] border-2 border-[#0A0A0A]">
+                          <BadgeCheck size={14} className="text-white" />
+                        </div>
+                      )}
+                    </Link>
+                    
+                    <div className="flex-1 min-w-0 pt-1">
+                      <Link to={`/profile/${user.id}`}>
+                        <h3 className="truncate text-lg font-black text-white hover:text-primary-400 transition-colors tracking-tight italic uppercase">
+                          {user.full_name || 'Miembro de la Red'}
+                        </h3>
+                      </Link>
+                      <div className="flex flex-col space-y-1 mt-1 text-[10px] font-bold text-white/30 uppercase tracking-widest">
+                        {user.category && (
+                          <div className="font-black text-primary-500">
+                            {user.category}
+                          </div>
+                        )}
+                        <div className="text-white/40 font-mono text-[9px] lowercase tracking-wide truncate">
+                          @{user.username || 'usuario'}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-                
-                {user.role === 'super_admin' && (
-                  <div className="absolute top-4 right-4">
-                    <span className="inline-flex items-center rounded-full bg-primary-600/10 px-3 py-1 text-[9px] font-black text-primary-400 border border-primary-600/30 uppercase tracking-[0.1em] italic">
-                      Administrador
-                    </span>
+
+                  {/* Detalle de rasgos y servicios en la tarjeta */}
+                  <div className="grid grid-cols-2 gap-2 mt-5 pt-4 border-t border-white/5 text-[10px] font-bold uppercase tracking-wider text-white/50">
+                    <div className="bg-black/15 py-1.5 px-2.5 rounded-lg border border-white/[0.02]">
+                      <span className="text-[8px] font-black text-white/20 uppercase tracking-widest block">Rasgos Físicos</span>
+                      <p className="text-white mt-0.5 leading-none">{user.age} años • {user.hair}</p>
+                    </div>
+                    <div className="bg-black/15 py-1.5 px-2.5 rounded-lg border border-white/[0.02]">
+                      <span className="text-[8px] font-black text-white/20 uppercase tracking-widest block">Especialidad</span>
+                      <p className="text-primary-400 mt-0.5 leading-none italic truncate">{user.service}</p>
+                    </div>
                   </div>
-                )}
-              </Card>
-            </motion.div>
-          )}
-        />
+                  
+                  {user.role === 'super_admin' && (
+                    <div className="absolute top-4 right-4">
+                      <span className="inline-flex items-center rounded-full bg-primary-600/10 px-3 py-1 text-[8px] font-black text-primary-400 border border-primary-600/30 uppercase tracking-[0.1em] italic">
+                        Admin
+                      </span>
+                    </div>
+                  )}
+                </Card>
+              </motion.div>
+            )}
+          />
+        )
       )}
     </div>
   );

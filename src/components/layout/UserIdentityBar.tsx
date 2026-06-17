@@ -1,22 +1,38 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useAuth } from '@/src/hooks/useAuth';
-import { Heart, Users, UserPlus } from 'lucide-react';
+import { Heart, Users, UserPlus, Coins, PlusCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { OptimizedImage } from '../ui/OptimizedImage';
 import { IMAGE_SIZES } from '@/src/lib/images';
 import { useUserStats } from '@/src/hooks/useUserStats';
 import { useUIStore } from '@/src/store/uiStore';
+import { creditsManager } from '@/src/lib/credits';
 
 export default function UserIdentityBar() {
   const { profile } = useAuth();
   const { stats } = useUserStats(profile?.id);
   const setActiveModal = useUIStore((state) => state.setActiveModal);
+  const [credits, setCredits] = useState(creditsManager.getCredits());
+
+  useEffect(() => {
+    const handleCreditsUpdate = () => {
+      setCredits(creditsManager.getCredits());
+    };
+    window.addEventListener('pasiones_vip_credits_updated', handleCreditsUpdate);
+    return () => {
+      window.removeEventListener('pasiones_vip_credits_updated', handleCreditsUpdate);
+    };
+  }, []);
 
   if (!profile) return null;
 
   const openModal = (type: 'followers' | 'following' | 'likes') => {
     setActiveModal('stats', { type, userId: profile.id });
+  };
+
+  const simulateRecharge = () => {
+    creditsManager.addCredits(100);
   };
 
   return (
@@ -37,40 +53,65 @@ export default function UserIdentityBar() {
         <div className="absolute inset-0 z-0 bg-zinc-950/50 backdrop-blur-md" />
       )}
 
-      <div className="relative z-10 container mx-auto max-w-6xl px-4 py-6 md:py-20 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <Link to={`/profile/${profile.id}`} className="flex items-center space-x-4 group min-w-0">
+      <div className="relative z-10 container mx-auto max-w-6xl px-4 py-6 md:py-16 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-6 min-w-0">
+          <Link to={`/profile/${profile.id}`} className="flex items-center space-x-4 group shrink-0">
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="h-14 w-14 rounded-2xl bg-zinc-900 border border-white/10 shadow-xl overflow-hidden neon-glow shrink-0 group-hover:scale-105 transition-transform"
+            >
+              {profile.avatar_url ? (
+                <OptimizedImage 
+                  src={profile.avatar_url} 
+                  alt={profile.full_name || 'Perfil'} 
+                  className="h-full w-full object-cover" 
+                  containerClassName="h-full w-full"
+                  transform={IMAGE_SIZES.AVATAR_MD}
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-passion-red/20 text-passion-red font-bold text-2xl">
+                  {profile.full_name?.[0] || 'U'}
+                </div>
+              )}
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex flex-col min-w-0"
+            >
+              <h2 className="text-xl font-black text-white truncate uppercase italic tracking-tight group-hover:text-passion-red transition-colors">
+                {profile.full_name || 'Usuario VIP'}
+              </h2>
+              <span className="text-xs font-bold text-white/40 lowercase tracking-wide truncate">
+                @{profile.username || 'usuario'}
+              </span>
+            </motion.div>
+          </Link>
+
+          {/* Golden Credits Chip */}
           <motion.div 
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="h-14 w-14 rounded-2xl bg-zinc-900 border border-white/10 shadow-xl overflow-hidden neon-glow shrink-0 group-hover:scale-105 transition-transform"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center space-x-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-2xl px-4 py-2.5 backdrop-blur-md self-start sm:self-auto shadow-lg shadow-amber-500/[0.03]"
           >
-            {profile.avatar_url ? (
-              <OptimizedImage 
-                src={profile.avatar_url} 
-                alt={profile.full_name || 'Perfil'} 
-                className="h-full w-full object-cover" 
-                containerClassName="h-full w-full"
-                transform={IMAGE_SIZES.AVATAR_MD}
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-passion-red/20 text-passion-red font-bold text-2xl">
-                {profile.full_name?.[0] || 'U'}
-              </div>
-            )}
+            <div className="bg-amber-500/20 p-1.5 rounded-xl text-amber-400">
+              <Coins size={14} className="animate-pulse" />
+            </div>
+            <div>
+              <p className="text-[9px] font-black uppercase text-amber-500/60 leading-none tracking-widest font-mono">Cartera Token</p>
+              <p className="text-sm font-black text-white leading-none mt-1 font-mono">{credits} <span className="font-sans text-xs font-medium text-white/50">Créditos</span></p>
+            </div>
+            <button
+              onClick={simulateRecharge}
+              className="ml-2 flex items-center gap-1 bg-amber-500 hover:bg-amber-400 active:scale-95 text-black text-[9px] font-black uppercase tracking-wider py-1 px-2.5 rounded-lg transition-all"
+              title="Obtener 100 créditos grátis para pruebas"
+            >
+              <PlusCircle size={10} />
+              <span>+100</span>
+            </button>
           </motion.div>
-          <motion.div
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex flex-col min-w-0"
-          >
-            <h2 className="text-xl font-black text-white truncate uppercase italic tracking-tight group-hover:text-passion-red transition-colors">
-              {profile.full_name || 'Usuario VIP'}
-            </h2>
-            <span className="text-xs font-bold text-white/40 lowercase tracking-wide truncate">
-              @{profile.username || 'usuario'}
-            </span>
-          </motion.div>
-        </Link>
+        </div>
 
         <motion.div 
           initial={{ opacity: 0, y: 10 }}

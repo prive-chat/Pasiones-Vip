@@ -2,27 +2,63 @@ import React, { useState, useMemo } from 'react';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
-import { Search, Filter, CheckCircle2, Eye, Download, UserCheck, ShieldAlert, SlidersHorizontal, RefreshCw } from 'lucide-react';
+import { Search, Filter, CheckCircle2, Eye, Download, UserCheck, ShieldAlert, SlidersHorizontal, RefreshCw, Clock, XCircle, ShieldCheck } from 'lucide-react';
 import { UserProfile } from '@/src/types';
 import { Link } from 'react-router-dom';
 import { cn } from '@/src/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@/src/lib/supabase';
 
 interface AdminUsersProps {
   profiles: UserProfile[];
   onToggleVerification: (id: string, status: boolean) => void;
+  onRefresh?: () => void;
 }
 
-export function AdminUsers({ profiles, onToggleVerification }: AdminUsersProps) {
+export function AdminUsers({ profiles, onToggleVerification, onRefresh }: AdminUsersProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'verified' | 'unverified'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'verified' | 'unverified' | 'pending'>('all');
   const [filterRole, setFilterRole] = useState<'all' | 'user' | 'super_admin'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'alphabetical'>('newest');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [selectedProfileForSelfie, setSelectedProfileForSelfie] = useState<UserProfile | null>(null);
+  const [localProfiles, setLocalProfiles] = useState<UserProfile[]>([]);
+
+  // Keep a local profiles copy and sync when source change
+  const currentProfiles = useMemo(() => {
+    return profiles.map(p => {
+      const match = localProfiles.find(lp => lp.id === p.id);
+      return match ? { ...p, ...match } : p;
+    });
+  }, [profiles, localProfiles]);
+
+  const handleUpdateStatus = async (userId: string, isVerified: boolean, status: 'none' | 'pending' | 'verified' | 'rejected') => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          is_verified: isVerified,
+          verification_status: status
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+      
+      // Update local profiles state to trigger instantaneous UI feedback
+      setLocalProfiles(prev => {
+        const existing = prev.filter(p => p.id !== userId);
+        return [...existing, { id: userId, is_verified: isVerified, verification_status: status } as any];
+      });
+      setSelectedProfileForSelfie(null);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      console.error('Error updating status:', err);
+    }
+  };
 
   // 1. Fully-functional Search & Filter logic
   const filteredProfiles = useMemo(() => {
-    return profiles
+    return currentProfiles
       .filter((profile) => {
         const matchesSearch = 
           (profile.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -33,7 +69,8 @@ export function AdminUsers({ profiles, onToggleVerification }: AdminUsersProps) 
         const matchesStatus =
           filterStatus === 'all' ||
           (filterStatus === 'verified' && profile.is_verified) ||
-          (filterStatus === 'unverified' && !profile.is_verified);
+          (filterStatus === 'pending' && profile.verification_status === 'pending') ||
+          (filterStatus === 'unverified' && !profile.is_verified && profile.verification_status !== 'pending');
 
         const matchesRole =
           filterRole === 'all' ||
@@ -50,7 +87,7 @@ export function AdminUsers({ profiles, onToggleVerification }: AdminUsersProps) 
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
         return dateB - dateA;
       });
-  }, [profiles, searchTerm, filterStatus, filterRole, sortBy]);
+  }, [currentProfiles, searchTerm, filterStatus, filterRole, sortBy]);
 
   // 2. Real CSV Exporter
   const handleExportCSV = () => {
@@ -163,13 +200,14 @@ export function AdminUsers({ profiles, onToggleVerification }: AdminUsersProps) 
                   {([
                     { id: 'all', label: 'Todos' },
                     { id: 'verified', label: 'Verificados' },
+                    { id: 'pending', label: 'Pendientes' },
                     { id: 'unverified', label: 'Sin Verificar' }
                   ] as const).map((opt) => (
                     <button
                       key={opt.id}
                       onClick={() => setFilterStatus(opt.id)}
                       className={cn(
-                        "flex-1 text-[10px] py-1.5 rounded-lg font-black uppercase tracking-wider transition-all",
+                        "flex-1 text-[10px] py-1.5 rounded-lg font-black uppercase tracking-wider transition-all whitespace-nowrap px-1",
                         filterStatus === opt.id ? "bg-white/10 text-white" : "text-white/40 hover:text-white/80"
                       )}
                     >
@@ -230,7 +268,7 @@ export function AdminUsers({ profiles, onToggleVerification }: AdminUsersProps) 
       <div className="flex items-center justify-between px-2 text-[10px] font-bold text-white/40 uppercase tracking-widest">
         <span>Mostrando {filteredProfiles.length} de {profiles.length} usuarios registrados en total</span>
         {filteredProfiles.filter(p => p.is_verified).length > 0 && (
-          <span className="text-primary-500">{filteredProfiles.filter(p => p.is_verified).length} verified matches</span>
+          <span className="text-primary-500">{filteredProfiles.filter(p => p.is_verified).length} verificados</span>
         )}
       </div>
 
@@ -246,18 +284,24 @@ export function AdminUsers({ profiles, onToggleVerification }: AdminUsersProps) 
           filteredProfiles.map((profile) => (
             <Card key={profile.id} className="p-4 glass-card border-none group hover:bg-white/5 transition-all">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center space-x-4 w-full sm:w-auto">
-                  <div className="h-14 w-14 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden ring-1 ring-white/10 relative">
+                <div className="flex items-center space-x-4 w-full sm:w-auto overflow-hidden">
+                  <div className="h-14 w-14 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden ring-1 ring-white/10 relative shrink-0">
                     {profile.avatar_url ? (
                       <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
                       <span className="text-xl font-black text-white/20">{profile.full_name?.[0] || 'U'}</span>
                     )}
                   </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="text-white font-bold truncate">{profile.full_name || 'Sin Nombre'}</h4>
                       {profile.is_verified && <CheckCircle2 size={14} className="text-primary-400" />}
+                      
+                      {profile.verification_status === 'pending' && (
+                        <span className="text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider bg-amber-500/25 text-amber-400 border border-amber-500/30 flex items-center gap-1 animate-pulse">
+                          <Clock size={10} /> Selfie VIP Pendiente
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-white/40 font-mono truncate">{profile.email}</p>
                     <div className="flex flex-wrap items-center gap-2 mt-1.5">
@@ -284,17 +328,35 @@ export function AdminUsers({ profiles, onToggleVerification }: AdminUsersProps) 
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
+                  {profile.verification_status === 'pending' && profile.verification_id_url && (
+                    <Button
+                      variant="glass"
+                      size="sm"
+                      onClick={() => setSelectedProfileForSelfie(profile)}
+                      className="font-black text-[10px] uppercase tracking-widest h-10 px-4 bg-amber-500/20 text-amber-400 hover:bg-amber-500 hover:text-black border border-amber-500/30 shrink-0"
+                    >
+                      Revisar Selfie
+                    </Button>
+                  )}
+                  
                   <Button
                     variant={profile.is_verified ? 'outline' : 'primary'}
                     size="sm"
-                    onClick={() => onToggleVerification(profile.id, profile.is_verified)}
-                    className="flex-1 sm:flex-none font-black text-[10px] uppercase tracking-widest h-10 px-4"
+                    onClick={() => {
+                      if (profile.is_verified) {
+                        handleUpdateStatus(profile.id, false, 'none');
+                      } else {
+                        handleUpdateStatus(profile.id, true, 'verified');
+                      }
+                    }}
+                    className="flex-1 sm:flex-none font-black text-[10px] uppercase tracking-widest h-10 px-4 whitespace-nowrap"
                   >
-                    {profile.is_verified ? 'Revocar Verificación' : 'Verificar Cuenta'}
+                    {profile.is_verified ? 'Revocar Acceso' : 'Verificar'}
                   </Button>
+                  
                   <Link to={`/profile/${profile.id}`}>
-                    <Button variant="outline" size="sm" className="h-10 w-10 p-0 border-white/10 hover:border-white/30 text-white/60 hover:text-white">
+                    <Button variant="outline" size="sm" className="h-10 w-10 p-0 border-white/10 hover:border-white/30 text-white/60 hover:text-white shrink-0">
                       <Eye size={18} />
                     </Button>
                   </Link>
@@ -304,6 +366,96 @@ export function AdminUsers({ profiles, onToggleVerification }: AdminUsersProps) 
           ))
         )}
       </div>
+
+      {/* Selfie Verification Approval Modal */}
+      <AnimatePresence>
+        {selectedProfileForSelfie && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-2xl overflow-hidden rounded-[2.5rem] p-8 glass-card border border-white/10 shadow-2xl relative"
+            >
+              <h3 className="text-xl font-black text-white italic uppercase tracking-widest text-center mb-1">
+                Verificación de Sello VIP
+              </h3>
+              <p className="text-xs text-white/40 text-center uppercase tracking-widest font-bold mb-6">
+                Compara las fotografías cuidadosamente antes de aprobar el sello
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                {/* Profile Pic Card */}
+                <div className="flex flex-col items-center p-4 bg-white/5 rounded-2xl border border-white/5">
+                  <span className="text-[10px] font-black text-primary-400 uppercase tracking-widest mb-3">Foto de Perfil</span>
+                  <div className="h-48 w-48 rounded-2xl overflow-hidden bg-black/40 ring-1 ring-white/10">
+                    {selectedProfileForSelfie.avatar_url ? (
+                      <img 
+                        src={selectedProfileForSelfie.avatar_url} 
+                        alt="Profile avatar" 
+                        className="h-full w-full object-cover" 
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-white/20 text-xs italic font-bold">Sin foto</div>
+                    )}
+                  </div>
+                  <span className="text-sm font-black text-white mt-4">{selectedProfileForSelfie.full_name}</span>
+                  <span className="text-xs text-white/40">@{selectedProfileForSelfie.username || 'sin_usuario'}</span>
+                </div>
+
+                {/* Verification Real-time Selfie Card */}
+                <div className="flex flex-col items-center p-4 bg-white/5 rounded-2xl border border-amber-500/20">
+                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-3 flex items-center gap-1">
+                    <Clock size={12} className="animate-pulse" /> Selfie en Tiempo Real
+                  </span>
+                  <div className="h-48 w-48 rounded-2xl overflow-hidden bg-black/40 ring-1 ring-amber-500/25">
+                    {selectedProfileForSelfie.verification_id_url ? (
+                      <img 
+                        src={selectedProfileForSelfie.verification_id_url} 
+                        alt="Verification Selfie" 
+                        className="h-full w-full object-cover cursor-pointer hover:scale-105 transition-transform" 
+                        referrerPolicy="no-referrer"
+                        onClick={() => window.open(selectedProfileForSelfie.verification_id_url, '_blank')}
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-white/20 text-xs italic font-bold">Sin selfie</div>
+                    )}
+                  </div>
+                  <span className="text-xs text-amber-500 font-bold mt-4 italic">Confirmar que corresponde al usuario</span>
+                  <span className="text-[10px] text-white/20 font-mono mt-1 select-all">{selectedProfileForSelfie.id}</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  onClick={() => handleUpdateStatus(selectedProfileForSelfie.id, true, 'verified')}
+                  className="flex-1 h-12 bg-green-500 hover:bg-green-600 text-black font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                >
+                  <ShieldCheck size={16} />
+                  Aprobar Sello VIP
+                </Button>
+                <Button
+                  onClick={() => handleUpdateStatus(selectedProfileForSelfie.id, false, 'rejected')}
+                  variant="outline"
+                  className="flex-1 h-12 border-red-500/30 hover:border-red-500 text-red-400 hover:bg-red-500/10 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                >
+                  <XCircle size={16} />
+                  Rechazar Solicitud
+                </Button>
+                <Button
+                  onClick={() => setSelectedProfileForSelfie(null)}
+                  variant="ghost"
+                  className="h-12 text-white/40 hover:text-white hover:bg-white/5 font-black uppercase tracking-widest text-xs"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

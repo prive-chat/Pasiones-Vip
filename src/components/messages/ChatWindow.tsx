@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, FormEvent, ChangeEvent, RefObject, FC } from 'react';
-import { Send, Image as ImageIcon, Loader2, ChevronLeft, MoreVertical, Eraser, Trash2, MessageSquare, CheckCircle2, Mic, StopCircle } from 'lucide-react';
+import { Send, Image as ImageIcon, Loader2, ChevronLeft, MoreVertical, Eraser, Trash2, MessageSquare, CheckCircle2, Mic, StopCircle, Video, Phone, PhoneOff, MicOff, Volume2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { CardHeader, CardTitle, CardContent } from '@/src/components/ui/Card';
@@ -72,6 +72,43 @@ export const ChatWindow: FC<ChatWindowProps> = ({
   const optionsRef = useRef<HTMLDivElement>(null);
   const virtuosoRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // P2P WebRTC Secure Call Simulator states (Item 5)
+  const [activeCall, setActiveCall] = useState<'video' | 'audio' | null>(null);
+  const [callStatus, setCallStatus] = useState<'dialing' | 'connected' | 'ended'>('dialing');
+  const [callTimer, setCallTimer] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const callTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Trigger call timers & signalling
+  useEffect(() => {
+    if (activeCall && callStatus === 'connected') {
+      callTimerRef.current = setInterval(() => {
+        setCallTimer(prev => prev + 1);
+      }, 1000);
+    } else {
+      if (callTimerRef.current) clearInterval(callTimerRef.current);
+      setCallTimer(0);
+    }
+    return () => { if (callTimerRef.current) clearInterval(callTimerRef.current); };
+  }, [activeCall, callStatus]);
+
+  useEffect(() => {
+    if (activeCall && callStatus === 'dialing') {
+      const timeout = setTimeout(() => {
+        setCallStatus('connected');
+      }, 2400);
+      return () => clearTimeout(timeout);
+    }
+  }, [activeCall, callStatus]);
+
+  const handleEndCall = () => {
+    setCallStatus('ended');
+    setTimeout(() => {
+      setActiveCall(null);
+      setCallStatus('dialing');
+    }, 1400);
+  };
 
   useEffect(() => {
     if (isRecording) {
@@ -169,7 +206,24 @@ export const ChatWindow: FC<ChatWindowProps> = ({
             </Link>
           </div>
 
-          <div className="relative" ref={optionsRef}>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setActiveCall('audio')}
+              className="p-2 rounded-xl bg-white/5 text-primary-400 hover:text-white hover:bg-primary-600/20 border border-white/5 transition-all mr-1"
+              title="Iniciar Audiollamada Encriptada"
+            >
+              <Phone size={16} />
+            </button>
+            <button
+              onClick={() => setActiveCall('video')}
+              className="p-2 rounded-xl bg-gradient-to-r from-red-600 to-primary-600 text-white hover:opacity-90 shadow-lg border border-red-500/10 transition-all mr-1 flex items-center justify-center gap-1 px-3 text-[10px] font-black uppercase tracking-widest italic"
+              title="Iniciar Videollamada P2P Segura"
+            >
+              <Video size={13} />
+              <span>P2P</span>
+            </button>
+            
+            <div className="relative" ref={optionsRef}>
             <button
               onClick={() => setIsOptionsOpen(!isOptionsOpen)}
               className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all"
@@ -202,6 +256,7 @@ export const ChatWindow: FC<ChatWindowProps> = ({
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
           </div>
         </div>
       </CardHeader>
@@ -426,6 +481,159 @@ export const ChatWindow: FC<ChatWindowProps> = ({
           )}
         </form>
       </div>
+
+      {/* P2P WebRTC Secure Call Portal Overlay (Item 5) */}
+      <AnimatePresence>
+        {activeCall && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="absolute inset-0 bg-[#070707] z-50 flex flex-col justify-between p-8 text-white select-none overflow-hidden h-full rounded-2xl"
+          >
+            {/* Top Security Banner info */}
+            <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 p-4 rounded-3xl w-full max-w-md mx-auto">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase text-green-400 tracking-wider">
+                <span className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)] animate-pulse" />
+                <span>WebRTC P2P Conectado</span>
+              </div>
+              <div className="text-[9px] font-black uppercase tracking-widest text-white/30 font-mono">
+                AES-256 Encriptación Completa
+              </div>
+            </div>
+
+            {/* Main Avatar / Video Center Feed */}
+            <div className="flex-grow flex flex-col items-center justify-center py-6 w-full max-w-sm mx-auto text-center">
+              {callStatus === 'dialing' && (
+                <div className="space-y-6">
+                  <div className="relative">
+                    {/* Pulsating circles around target avatar */}
+                    <div className="absolute -inset-6 rounded-full border border-primary-500/10 animate-ping opacity-30" />
+                    <div className="absolute -inset-12 rounded-full border border-primary-500/5 animate-ping opacity-20" />
+                    
+                    <div className="h-32 w-32 rounded-full border bg-black/40 p-1 border-primary-500/30 shadow-[0_0_40px_rgba(230,0,0,0.15)] overflow-hidden mx-auto flex items-center justify-center">
+                      {targetUser?.avatar_url ? (
+                        <img src={targetUser.avatar_url} alt="" className="h-full w-full object-cover rounded-full" />
+                      ) : (
+                        <span className="text-3xl uppercase font-bold text-white/30">{targetUser?.full_name?.[0] || 'U'}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-black uppercase italic tracking-tight text-white">{targetUser?.full_name}</h3>
+                    <p className="text-[10px] text-primary-400 font-extrabold uppercase tracking-widest animate-pulse leading-none">Estableciendo puente WebRTC...</p>
+                  </div>
+                </div>
+              )}
+
+              {callStatus === 'connected' && (
+                activeCall === 'video' ? (
+                  /* SIMULATED P2P HIGH QUALITY VIDEO CHANNEL */
+                  <div className="relative w-full aspect-[3/4] rounded-3xl overflow-hidden border border-white/5 bg-zinc-950 shadow-2xl flex items-center justify-center">
+                    {/* Simulated main models call image with high-tech overlays */}
+                    <img 
+                      src={targetUser?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80'} 
+                      alt="" 
+                      className="absolute inset-0 h-full w-full object-cover brightness-[0.7] contrast-[1.05]"
+                      referrerPolicy="no-referrer"
+                    />
+                    
+                    {/* PiP Selfie Picture in Picture Frame from local user camera */}
+                    <div className="absolute bottom-4 right-4 h-24 w-18 rounded-xl overflow-hidden border border-white/20 bg-black/80 shadow-2xl z-20 flex items-center justify-center">
+                      <div className="text-[8px] font-black tracking-widest text-[#E60000] uppercase animate-pulse">Tú (Me)</div>
+                    </div>
+
+                    <div className="absolute top-4 left-4 flex flex-col gap-1 z-20 font-mono text-[9px] text-green-400 font-bold bg-black/50 py-1.5 px-3 rounded-lg border border-green-500/20 text-left">
+                      <p>📡 P2P SEÑALIZACIÓN: ESTABLE</p>
+                      <p>⚡ FPS: 60FPS / HD 1080P</p>
+                      <p className="flex items-center gap-1">⏱️ DURACIÓN: {formatTime(callTimer)}</p>
+                    </div>
+                  </div>
+                ) : (
+                  /* SIMULATED P2P AUDIO CALL WAVEFORMS */
+                  <div className="space-y-8 flex flex-col items-center">
+                    <div className="h-28 w-28 rounded-full border border-white/10 p-1 shadow-2xl overflow-hidden mx-auto">
+                      {targetUser?.avatar_url ? (
+                        <img src={targetUser.avatar_url} alt="" className="h-full w-full object-cover rounded-full" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="text-2xl uppercase font-bold text-white/30">{targetUser?.full_name?.[0] || 'U'}</span>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <h4 className="text-lg font-black uppercase tracking-tight text-white">{targetUser?.full_name}</h4>
+                      <p className="text-[10px] text-green-400 font-black uppercase tracking-widest font-mono">Llamada de voz segura... {formatTime(callTimer)}</p>
+                    </div>
+
+                    {/* Animated sound equalizer/wave bars */}
+                    <div className="flex items-center justify-center gap-1.5 h-12">
+                      {[...Array(6)].map((_, i) => (
+                        <motion.div
+                          key={i}
+                          animate={{ height: [12, 48, 12] }}
+                          transition={{
+                            duration: 0.8 + i * 0.1,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                          className="w-1 rounded-full bg-primary-500"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )
+              )}
+
+              {callStatus === 'ended' && (
+                <div className="space-y-3">
+                  <div className="h-20 w-20 rounded-full bg-red-600/10 border border-red-500/20 flex items-center justify-center mx-auto text-red-500">
+                    <PhoneOff size={32} />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-black text-white uppercase italic tracking-tighter">Llamada Finalizada</h4>
+                    <p className="text-[10px] text-white/40 uppercase tracking-widest font-mono mt-1">Conexión P2P cerrada inmediatamente.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Actions Controls */}
+            {callStatus !== 'ended' && (
+              <div className="flex items-center justify-center gap-6 w-full max-w-sm mx-auto p-4 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsMuted(!isMuted)}
+                  className={cn(
+                    "p-4 rounded-full border transition-all",
+                    isMuted ? 'bg-[#E60000] border-red-600 text-white' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                  )}
+                  title={isMuted ? "Quitar Silencio" : "Silenciar Micrófono"}
+                >
+                  <MicOff size={20} />
+                </button>
+                
+                {/* Large Red End-Call Button */}
+                <button
+                  type="button"
+                  onClick={handleEndCall}
+                  className="p-5 rounded-full bg-red-600 hover:bg-red-700 text-white border border-red-500/20 shadow-2xl transition-transform hover:scale-110 active:scale-95"
+                  title="Colgar y Destruir Enlace"
+                >
+                  <PhoneOff size={24} />
+                </button>
+
+                <button
+                  type="button"
+                  className="p-4 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all"
+                  title="Cambiar Altavoz"
+                >
+                  <Volume2 size={20} />
+                </button>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

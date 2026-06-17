@@ -2,7 +2,7 @@ import { memo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
-import { Heart, MessageSquare, Trash2, Maximize2, CheckCircle2, Share2, Flame, Laugh, Heart as HeartIcon, Copy, Facebook, Twitter, Send } from 'lucide-react';
+import { Heart, MessageSquare, Trash2, Maximize2, CheckCircle2, Share2, Flame, Laugh, Heart as HeartIcon, Copy, Facebook, Twitter, Send, Lock, EyeOff, ShieldCheck, Eye, Coins } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { mediaService } from '../services/mediaService';
 import { useAuth } from '../hooks/useAuth';
@@ -12,6 +12,9 @@ import { MediaItem } from '../types';
 import { OptimizedImage } from './ui/OptimizedImage';
 import { IMAGE_SIZES } from '../lib/images';
 import { Button } from './ui/Button';
+import { creditsManager } from '../lib/credits';
+import { useNotificationStore } from '../store/notificationStore';
+import { useEffect } from 'react';
 
 interface MediaCardProps {
   item: MediaItem;
@@ -30,10 +33,79 @@ const REACTIONS = [
 const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { addToast } = useNotificationStore();
   const [showReactions, setShowReactions] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+
+  // Load Premium / Ephemeral Metadata dynamically
+  const premiumMetadata = JSON.parse(localStorage.getItem('pasiones_vip_posts_premium_metadata') || '{}')[item.id] || null;
+  const isPremiumPost = premiumMetadata?.is_premium || false;
+  const premiumPrice = premiumMetadata?.price || 0;
+  const isSelfDestructPost = premiumMetadata?.is_self_destruct || false;
+
+  // Reactively track unlock and watched status
+  const [isUnlocked, setIsUnlocked] = useState(() => {
+    if (item.user_id === user?.id) return true;
+    if (!isPremiumPost) return true;
+    const unlockedList = JSON.parse(localStorage.getItem('pasiones_vip_unlocked_posts') || '[]');
+    return unlockedList.includes(item.id);
+  });
+
+  const [isDestroyed, setIsDestroyed] = useState(() => {
+    if (item.user_id === user?.id) return false;
+    if (!isSelfDestructPost) return false;
+    const destroyedList = JSON.parse(localStorage.getItem('pasiones_vip_destroyed_posts') || '[]');
+    return destroyedList.includes(item.id);
+  });
+
+  // Screenshot ScreenShield Protection Hook (Item 2)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'PrintScreen' || (e.metaKey && e.shiftKey && e.key === 'S')) {
+        addToast({
+          type: 'error',
+          message: '🔒 ScreenShield Activo',
+          description: 'Las capturas de pantalla están penalizadas y bloqueadas para resguardar la intimidad VIP.',
+          duration: 5000
+        });
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [addToast]);
+
+  const handleUnlockPremium = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isUnlocked) return;
+    
+    const success = creditsManager.deductCredits(premiumPrice);
+    if (success) {
+      const unlockedList = JSON.parse(localStorage.getItem('pasiones_vip_unlocked_posts') || '[]');
+      if (!unlockedList.includes(item.id)) {
+        unlockedList.push(item.id);
+        localStorage.setItem('pasiones_vip_unlocked_posts', JSON.stringify(unlockedList));
+      }
+      setIsUnlocked(true);
+      addToast({
+        type: 'success',
+        message: '¡Contenido Desbloqueado!',
+        description: `Se han deducido ${premiumPrice} créditos de tu cartera VIP.`,
+        duration: 4000
+      });
+    } else {
+      addToast({
+        type: 'error',
+        message: 'Créditos Insuficientes',
+        description: `Esta publicación cuesta ${premiumPrice} créditos. Recarga saldo en tu Cartera arriba.`,
+        duration: 5000
+      });
+    }
+  };
 
   const shareUrl = `${window.location.origin}/post/${item.id}`;
   const shareText = item.caption || '¡Mira esta publicación en Pasiones Vip!';
@@ -184,27 +256,105 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
     >
       <Card className="overflow-hidden bg-[#0A0A0A] border border-white/5 group/card shadow-2xl rounded-3xl transition-all duration-500 hover:border-primary-600/30">
         <div 
-          className="aspect-[4/5] w-full bg-black/40 relative cursor-pointer overflow-hidden flex items-center justify-center"
-          onClick={() => onView(item.url, item.type as 'image' | 'video')}
+          className="aspect-[4/5] w-full bg-black/40 relative overflow-hidden flex items-center justify-center select-none"
+          style={{
+            userSelect: 'none',
+            WebkitUserSelect: 'none'
+          }}
+          onClick={(e) => {
+            if (isDestroyed) {
+              addToast({
+                type: 'error',
+                message: 'Contenido Destruido',
+                description: 'Este archivo efímero ya expiró y fue eliminado del caché temporal.',
+                duration: 4000
+              });
+              return;
+            }
+            if (!isUnlocked) return;
+            
+            // Ephemeral Autodestrucción loop
+            if (isSelfDestructPost) {
+              const destroyedList = JSON.parse(localStorage.getItem('pasiones_vip_destroyed_posts') || '[]');
+              if (!destroyedList.includes(item.id)) {
+                destroyedList.push(item.id);
+                localStorage.setItem('pasiones_vip_destroyed_posts', JSON.stringify(destroyedList));
+              }
+              setIsDestroyed(true);
+              addToast({
+                type: 'progress',
+                message: 'Modo Un Solo Uso',
+                description: 'Este contenido se auto-destruirá al cerrar su visualización.',
+                duration: 6000
+              });
+            }
+            
+            onView(item.url, item.type as 'image' | 'video');
+          }}
         >
+          {/* Blurred Lock Screen */}
+          {!isUnlocked && !isDestroyed && (
+            <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/95 to-black/90 z-20 flex flex-col items-center justify-center p-6 text-center">
+              <div className="bg-amber-500/10 p-4 rounded-3xl border border-amber-500/20 mb-3 text-amber-400">
+                <Lock size={36} className="animate-pulse" />
+              </div>
+              <h4 className="text-sm font-black uppercase tracking-widest text-amber-500">Muro Premium VIP</h4>
+              <p className="text-xs text-white/50 mt-1.5 font-medium max-w-[220px]">
+                Este creador configuró esta publicación como exclusiva para seguidores premium.
+              </p>
+              
+              <button
+                onClick={handleUnlockPremium}
+                className="mt-5 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-black text-xs font-black uppercase tracking-wider py-3 px-6 rounded-2xl shadow-xl transition-all hover:scale-[1.03] active:scale-95 animate-pulse"
+              >
+                <Coins size={14} />
+                Desbloquear por {premiumPrice} Créditos
+              </button>
+            </div>
+          )}
+
+          {/* Destroyed Screen */}
+          {isDestroyed && (
+            <div className="absolute inset-0 bg-zinc-950 z-20 flex flex-col items-center justify-center p-6 text-center">
+              <div className="bg-red-500/10 p-4 rounded-3xl border border-red-500/20 mb-3 text-red-500">
+                <EyeOff size={36} />
+              </div>
+              <h4 className="text-sm font-black uppercase tracking-widest text-red-500">Contenido Auto-Destruido</h4>
+              <p className="text-xs text-white/40 mt-1.5 font-medium max-w-[200px]">
+                Este archivo efímero de visualización única ya ha sido eliminado por privacidad.
+              </p>
+            </div>
+          )}
+
+          {/* Standard background blurry preview if not unlocked */}
           <div 
             className="absolute inset-0 opacity-20 blur-3xl scale-150 transition-transform duration-700 group-hover/card:scale-100"
             style={{ 
               backgroundImage: item.type === 'image' ? `url(${item.url})` : 'none',
               backgroundColor: item.type === 'video' ? 'rgba(0,0,0,0.5)' : 'transparent',
               backgroundSize: 'cover',
-              backgroundPosition: 'center'
+              backgroundPosition: 'center',
+              filter: (!isUnlocked || isDestroyed) ? 'blur(100px) grayscale(100%)' : ''
             }}
           />
           
-          {item.url && (
+          {item.url && !isDestroyed && (
             item.type === 'video' ? (
-              <video src={item.url} className="relative z-10 h-full w-full object-contain" />
+              <video 
+                src={item.url} 
+                className={cn(
+                  "relative z-10 h-full w-full object-contain transition-all duration-500",
+                  !isUnlocked && "blur-[80px] grayscale select-none pointer-events-none"
+                )} 
+              />
             ) : (
               <OptimizedImage 
                 src={item.url} 
                 alt={item.caption || ''} 
-                className="relative z-10 h-full w-full object-contain transition-all duration-700 group-hover/card:scale-105" 
+                className={cn(
+                  "relative z-10 h-full w-full object-contain transition-all duration-700 group-hover/card:scale-105",
+                  !isUnlocked && "blur-[80px] grayscale select-none pointer-events-none"
+                )}
                 containerClassName="h-full w-full"
                 transform={IMAGE_SIZES.FEED_POST}
               />
@@ -213,15 +363,25 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
           
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
           
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/card:opacity-100 transition-opacity flex items-center justify-center z-20">
-            <motion.div 
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className="rounded-full bg-primary-600/80 p-4 backdrop-blur-md border border-white/20 shadow-2xl"
-            >
-              <Maximize2 size={24} className="text-white" />
-            </motion.div>
-          </div>
+          {isUnlocked && !isDestroyed && (
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/card:opacity-100 transition-opacity flex items-center justify-center z-20 cursor-pointer">
+              <motion.div 
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="rounded-full bg-primary-600/80 p-4 backdrop-blur-md border border-white/20 shadow-2xl"
+              >
+                <Maximize2 size={24} className="text-white" />
+              </motion.div>
+            </div>
+          )}
+
+          {/* Ephemeral Tag Badge */}
+          {isSelfDestructPost && !isDestroyed && (
+            <div className="absolute top-4 left-4 z-40 flex items-center gap-1.5 bg-red-600 text-white font-black uppercase text-[8px] tracking-widest py-1 px-2.5 rounded-full border border-red-500/20 shadow-lg select-none">
+              <EyeOff size={10} />
+              Efímero (Un Solo Uso)
+            </div>
+          )}
         </div>
         <CardContent className="p-6">
           <div className="mb-4 flex items-center justify-between">
