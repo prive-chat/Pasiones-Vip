@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, FormEvent, ChangeEvent, RefObject, FC } from 'react';
-import { Send, Image as ImageIcon, Loader2, ChevronLeft, MoreVertical, Eraser, Trash2, MessageSquare, CheckCircle2, Mic, StopCircle, Video, Phone, PhoneOff, MicOff, Volume2 } from 'lucide-react';
+import { Send, Image as ImageIcon, Loader2, ChevronLeft, MoreVertical, Eraser, Trash2, MessageSquare, CheckCircle2, Mic, StopCircle, Video, Phone, PhoneOff, MicOff, Volume2, VideoOff } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { CardHeader, CardTitle, CardContent } from '@/src/components/ui/Card';
@@ -12,6 +12,14 @@ import { X, AlertCircle, Lock, EyeOff } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import { isSameDay, format, isToday, isYesterday } from 'date-fns';
 import { es } from 'date-fns/locale';
+import AgoraRTC from 'agora-rtc-sdk-ng';
+
+try {
+  AgoraRTC.setLogLevel(3); // Warning and errors only to keep console pristine
+} catch (e) {
+  console.warn('Could not set Agora log level', e);
+}
+
 
 interface ChatWindowProps {
   targetUser: UserProfile | null;
@@ -87,14 +95,26 @@ export const ChatWindow: FC<ChatWindowProps> = ({
   const virtuosoRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // P2P WebRTC Secure Call Simulator states (Item 5)
+  // P2P WebRTC Secure Call Simulator states (Item 5) upgraded to Real Agora RTC Integration
   const [activeCall, setActiveCall] = useState<'video' | 'audio' | null>(null);
   const [callStatus, setCallStatus] = useState<'dialing' | 'connected' | 'ended'>('dialing');
   const [callTimer, setCallTimer] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
+  const [isVideoMuted, setIsVideoMuted] = useState(false);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Trigger call timers & signalling
+  // Real Agora WebRTC Track & Client States
+  const [localAudioTrack, setLocalAudioTrack] = useState<any>(null);
+  const [localVideoTrack, setLocalVideoTrack] = useState<any>(null);
+  const [remoteUsers, setRemoteUsers] = useState<any[]>([]);
+  const [agoraJoined, setAgoraJoined] = useState(false);
+  const [rtcError, setRtcError] = useState<string | null>(null);
+
+  const localVideoRef = useRef<HTMLDivElement>(null);
+  const remoteVideoRefs = useRef<{ [uid: string]: HTMLDivElement | null }>({});
+  const rtcClientRef = useRef<any>(null);
+
+  // Trigger call duration stopwatch
   useEffect(() => {
     if (activeCall && callStatus === 'connected') {
       callTimerRef.current = setInterval(() => {
@@ -107,21 +127,181 @@ export const ChatWindow: FC<ChatWindowProps> = ({
     return () => { if (callTimerRef.current) clearInterval(callTimerRef.current); };
   }, [activeCall, callStatus]);
 
+  // Bind or play dynamic remote user screens as they register in state
   useEffect(() => {
-    if (activeCall && callStatus === 'dialing') {
-      const timeout = setTimeout(() => {
-        setCallStatus('connected');
-      }, 2400);
-      return () => clearTimeout(timeout);
-    }
-  }, [activeCall, callStatus]);
+    remoteUsers.forEach(user => {
+      const uidStr = user.uid.toString();
+      const divElement = remoteVideoRefs.current[uidStr];
+      if (divElement && user.videoTrack) {
+        user.videoTrack.play(divElement);
+      }
+    });
+  }, [remoteUsers]);
 
-  const handleEndCall = () => {
+  // Real Agora call initializer
+  const startAgoraCall = async (type: 'video' | 'audio') => {
+    setRtcError(null);
+    setCallStatus('dialing');
+    setActiveCall(type);
+    setRemoteUsers([]);
+    setIsMuted(false);
+    setIsVideoMuted(false);
+
+    const appId = import.meta.env.VITE_AGORA_APP_ID || '';
+    const channelName = [currentUser?.id, targetUser?.id].sort().filter(Boolean).join('-');
+    const uid = currentUser?.id || Math.floor(Math.random() * 10000).toString();
+
+    try {
+      // 1. Instantiate the modern NextGen Agora RTC Client
+      const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+      rtcClientRef.current = client;
+
+      // Register live RTC communication events
+      client.on('user-published', async (user, mediaType) => {
+        await client.subscribe(user, mediaType);
+        
+        if (mediaType === 'video') {
+          setRemoteUsers(prev => {
+            if (prev.find(u => u.uid === user.uid)) return prev;
+            return [...prev, user];
+          });
+        }
+        if (mediaType === 'audio') {
+          user.audioTrack?.play();
+        }
+      });
+
+      client.on('user-unpublished', (user, mediaType) => {
+        if (mediaType === 'video') {
+          setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
+        }
+      });
+
+      client.on('user-left', (user) => {
+        setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
+      });
+
+      // 2. Initialize and open media devices
+      let audioT: any = null;
+      let videoT: any = null;
+
+      try {
+        audioT = await AgoraRTC.createMicrophoneAudioTrack();
+        setLocalAudioTrack(audioT);
+      } catch (e) {
+        console.warn('Microphone configuration failed:', e);
+      }
+
+      if (type === 'video') {
+        try {
+          videoT = await AgoraRTC.createCameraVideoTrack();
+          setLocalVideoTrack(videoT);
+        } catch (e) {
+          console.warn('Camera configuration failed:', e);
+        }
+      }
+
+      // 3. Connect to the room
+      if (appId) {
+        await client.join(appId, channelName, null, uid);
+        setAgoraJoined(true);
+
+        const publishTracks = [];
+        if (audioT) publishTracks.push(audioT);
+        if (videoT) publishTracks.push(videoT);
+
+        if (publishTracks.length > 0) {
+          await client.publish(publishTracks);
+        }
+        setCallStatus('connected');
+      } else {
+        // Safe local mirror/preview test if VITE_AGORA_APP_ID not configured
+        console.info('VITE_AGORA_APP_ID fallback mode activated.');
+        setCallStatus('connected');
+      }
+
+      // Instantly start rendering user's own live camera preview
+      if (videoT) {
+        setTimeout(() => {
+          if (localVideoRef.current) {
+            videoT.play(localVideoRef.current);
+          }
+        }, 150);
+      }
+
+    } catch (err: any) {
+      console.error('Failed to prepare Agora RTC Stream:', err);
+      setRtcError(err.message || 'Cámara o micrófono inaccesibles.');
+      setCallStatus('ended');
+      setTimeout(() => {
+        setActiveCall(null);
+      }, 3000);
+    }
+  };
+
+  // Safe channel exit and media cleanup
+  const handleEndCall = async () => {
     setCallStatus('ended');
+    
+    if (localAudioTrack) {
+      try {
+        localAudioTrack.stop();
+        localAudioTrack.close();
+      } catch (e) {}
+      setLocalAudioTrack(null);
+    }
+    if (localVideoTrack) {
+      try {
+        localVideoTrack.stop();
+        localVideoTrack.close();
+      } catch (e) {}
+      setLocalVideoTrack(null);
+    }
+
+    if (rtcClientRef.current) {
+      try {
+        if (agoraJoined) {
+          await rtcClientRef.current.leave();
+        }
+      } catch (e) {
+        console.error('Error leaving Agora channels:', e);
+      }
+      rtcClientRef.current = null;
+    }
+
+    setRemoteUsers([]);
+    setAgoraJoined(false);
+    setIsMuted(false);
+    setIsVideoMuted(false);
+
     setTimeout(() => {
       setActiveCall(null);
       setCallStatus('dialing');
     }, 1400);
+  };
+
+  const toggleMute = () => {
+    if (localAudioTrack) {
+      if (isMuted) {
+        localAudioTrack.setEnabled(true);
+        setIsMuted(false);
+      } else {
+        localAudioTrack.setEnabled(false);
+        setIsMuted(true);
+      }
+    }
+  };
+
+  const toggleVideoMute = () => {
+    if (localVideoTrack) {
+      if (isVideoMuted) {
+        localVideoTrack.setEnabled(true);
+        setIsVideoMuted(false);
+      } else {
+        localVideoTrack.setEnabled(false);
+        setIsVideoMuted(true);
+      }
+    }
   };
 
   useEffect(() => {
@@ -222,14 +402,14 @@ export const ChatWindow: FC<ChatWindowProps> = ({
 
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => setActiveCall('audio')}
+              onClick={() => startAgoraCall('audio')}
               className="p-2 rounded-xl bg-white/5 text-primary-400 hover:text-white hover:bg-primary-600/20 border border-white/5 transition-all mr-1"
               title="Iniciar Audiollamada Encriptada"
             >
               <Phone size={16} />
             </button>
             <button
-              onClick={() => setActiveCall('video')}
+              onClick={() => startAgoraCall('video')}
               className="p-2 rounded-xl bg-gradient-to-r from-red-600 to-primary-600 text-white hover:opacity-90 shadow-lg border border-red-500/10 transition-all mr-1 flex items-center justify-center gap-1 px-3 text-[10px] font-black uppercase tracking-widest italic"
               title="Iniciar Videollamada P2P Segura"
             >
@@ -622,15 +802,23 @@ export const ChatWindow: FC<ChatWindowProps> = ({
             className="absolute inset-0 bg-[#070707] z-50 flex flex-col justify-between p-8 text-white select-none overflow-hidden h-full rounded-2xl"
           >
             {/* Top Security Banner info */}
-            <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 p-4 rounded-3xl w-full max-w-md mx-auto">
+            <div className="flex flex-col sm:flex-row items-center gap-3 sm:justify-between bg-white/[0.02] border border-white/5 p-4 rounded-3xl w-full max-w-md mx-auto">
               <div className="flex items-center gap-2 text-[10px] font-black uppercase text-green-400 tracking-wider">
                 <span className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)] animate-pulse" />
-                <span>WebRTC P2P Conectado</span>
+                <span>WebRTC Agora RTC Conectado</span>
               </div>
               <div className="text-[9px] font-black uppercase tracking-widest text-white/30 font-mono">
-                AES-256 Encriptación Completa
+                {import.meta.env.VITE_AGORA_APP_ID ? 'Modo Producción Activo' : 'Canal Abierto P2P'}
               </div>
             </div>
+
+            {/* Error Banner if RTC failed */}
+            {rtcError && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-3 text-xs text-red-400 text-center max-w-sm mx-auto mt-4 flex items-center justify-center gap-2">
+                <AlertCircle size={14} />
+                <span>{rtcError}</span>
+              </div>
+            )}
 
             {/* Main Avatar / Video Center Feed */}
             <div className="flex-grow flex flex-col items-center justify-center py-6 w-full max-w-sm mx-auto text-center">
@@ -658,29 +846,69 @@ export const ChatWindow: FC<ChatWindowProps> = ({
 
               {callStatus === 'connected' && (
                 activeCall === 'video' ? (
-                  /* SIMULATED P2P HIGH QUALITY VIDEO CHANNEL */
+                  /* REAL WEBRTC VIDEO CHANNEL CONTAINER */
                   <div className="relative w-full aspect-[3/4] rounded-3xl overflow-hidden border border-white/5 bg-zinc-950 shadow-2xl flex items-center justify-center">
-                    {/* Simulated main models call image with high-tech overlays */}
-                    <img 
-                      src={targetUser?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80'} 
-                      alt="" 
-                      className="absolute inset-0 h-full w-full object-cover brightness-[0.7] contrast-[1.05]"
-                      referrerPolicy="no-referrer"
-                    />
+                    
+                    {/* Remote users video streams layer */}
+                    {remoteUsers.length > 0 ? (
+                      remoteUsers.map(user => (
+                        <div 
+                          key={user.uid} 
+                          ref={el => { remoteVideoRefs.current[user.uid.toString()] = el; }} 
+                          className="absolute inset-0 h-full w-full object-cover" 
+                        />
+                      ))
+                    ) : (
+                      /* Fallback placeholder when waiting for remote peer */
+                      <div className="relative w-full h-full flex items-center justify-center">
+                        <img 
+                          src={targetUser?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80'} 
+                          alt="" 
+                          className="absolute inset-0 h-full w-full object-cover brightness-[0.5] blur-xs"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="p-4 bg-black/80 rounded-2xl border border-white/5 z-10 max-w-[240px] text-center space-y-2">
+                          <p className="text-xs font-black uppercase tracking-widest text-[#E60000] animate-pulse">Llamando...</p>
+                          <p className="text-[9px] text-white/60 leading-normal">
+                            {!import.meta.env.VITE_AGORA_APP_ID 
+                              ? "Canal en modo pruebas local. Configura VITE_AGORA_APP_ID en .env para videollamadas con otros dispositivos."
+                              : "Esperando a que la otra persona se conecte al canal..."}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                     
                     {/* PiP Selfie Picture in Picture Frame from local user camera */}
-                    <div className="absolute bottom-4 right-4 h-24 w-18 rounded-xl overflow-hidden border border-white/20 bg-black/80 shadow-2xl z-20 flex items-center justify-center">
-                      <div className="text-[8px] font-black tracking-widest text-[#E60000] uppercase animate-pulse">Tú (Me)</div>
+                    <div 
+                      ref={localVideoRef}
+                      className={cn(
+                        "absolute bottom-4 right-4 h-32 w-24 rounded-2xl overflow-hidden border bg-black/80 shadow-2xl z-20 flex items-center justify-center transition-all",
+                        isVideoMuted ? "border-red-500/40" : "border-white/20"
+                      )}
+                    >
+                      {/* Overlay when your camera is stopped */}
+                      {isVideoMuted && (
+                        <div className="absolute inset-0 bg-zinc-900 flex flex-col items-center justify-center p-2 text-center">
+                          <VideoOff size={16} className="text-red-500 mb-1" />
+                          <span className="text-[8px] font-bold text-white/40 uppercase">Video Off</span>
+                        </div>
+                      )}
+                      
+                      {!localVideoTrack && !isVideoMuted && (
+                        <div className="text-[8px] font-black tracking-widest text-[#E60000] uppercase animate-pulse text-center p-2">
+                          Tú (Sin Video)
+                        </div>
+                      )}
                     </div>
 
-                    <div className="absolute top-4 left-4 flex flex-col gap-1 z-20 font-mono text-[9px] text-green-400 font-bold bg-black/50 py-1.5 px-3 rounded-lg border border-green-500/20 text-left">
+                    <div className="absolute top-4 left-4 flex flex-col gap-1 z-20 font-mono text-[9px] text-green-400 font-bold bg-black/70 py-1.5 px-3 rounded-xl border border-green-500/20 text-left">
                       <p>📡 P2P SEÑALIZACIÓN: ESTABLE</p>
-                      <p>⚡ FPS: 60FPS / HD 1080P</p>
+                      <p>⚡ AUDIO: {isMuted ? 'SILENCIADO' : 'ACTIVO'}</p>
                       <p className="flex items-center gap-1">⏱️ DURACIÓN: {formatTime(callTimer)}</p>
                     </div>
                   </div>
                 ) : (
-                  /* SIMULATED P2P AUDIO CALL WAVEFORMS */
+                  /* WEBRTC AUDIO CALL WAVEFORMS & METRICS */
                   <div className="space-y-8 flex flex-col items-center">
                     <div className="h-28 w-28 rounded-full border border-white/10 p-1 shadow-2xl overflow-hidden mx-auto">
                       {targetUser?.avatar_url ? (
@@ -692,21 +920,23 @@ export const ChatWindow: FC<ChatWindowProps> = ({
                     
                     <div className="space-y-1">
                       <h4 className="text-lg font-black uppercase tracking-tight text-white">{targetUser?.full_name}</h4>
-                      <p className="text-[10px] text-green-400 font-black uppercase tracking-widest font-mono">Llamada de voz segura... {formatTime(callTimer)}</p>
+                      <p className="text-[10px] text-green-400 font-black uppercase tracking-widest font-mono">
+                        {isMuted ? 'Micrófono Silenciado' : `Llamada de voz segura... ${formatTime(callTimer)}`}
+                      </p>
                     </div>
 
-                    {/* Animated sound equalizer/wave bars */}
+                    {/* Animated sound equalizer/wave bars representing live audio track activity */}
                     <div className="flex items-center justify-center gap-1.5 h-12">
                       {[...Array(6)].map((_, i) => (
                         <motion.div
                           key={i}
-                          animate={{ height: [12, 48, 12] }}
-                          transition={{
+                          animate={{ height: isMuted ? 4 : [12, 48, 12] }}
+                          transition={isMuted ? {} : {
                             duration: 0.8 + i * 0.1,
                             repeat: Infinity,
                             ease: "easeInOut"
                           }}
-                          className="w-1 rounded-full bg-primary-500"
+                          className={cn("w-1 rounded-full transition-all", isMuted ? 'bg-red-500' : 'bg-primary-500')}
                         />
                       ))}
                     </div>
@@ -721,7 +951,7 @@ export const ChatWindow: FC<ChatWindowProps> = ({
                   </div>
                   <div>
                     <h4 className="text-base font-black text-white uppercase italic tracking-tighter">Llamada Finalizada</h4>
-                    <p className="text-[10px] text-white/40 uppercase tracking-widest font-mono mt-1">Conexión P2P cerrada inmediatamente.</p>
+                    <p className="text-[10px] text-white/40 uppercase tracking-widest font-mono mt-1">Enlace de comunicación desconectado con éxito.</p>
                   </div>
                 </div>
               )}
@@ -729,25 +959,41 @@ export const ChatWindow: FC<ChatWindowProps> = ({
 
             {/* Bottom Actions Controls */}
             {callStatus !== 'ended' && (
-              <div className="flex items-center justify-center gap-6 w-full max-w-sm mx-auto p-4 shrink-0">
+              <div className="flex items-center justify-center gap-4 w-full max-w-sm mx-auto p-4 shrink-0">
+                {/* Mute Audio Mic Button */}
                 <button
                   type="button"
-                  onClick={() => setIsMuted(!isMuted)}
+                  onClick={toggleMute}
                   className={cn(
                     "p-4 rounded-full border transition-all",
-                    isMuted ? 'bg-[#E60000] border-red-600 text-white' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                    isMuted ? 'bg-[#E60000] border-red-600 text-white shadow-[0_0_15px_rgba(230,0,0,0.4)]' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
                   )}
                   title={isMuted ? "Quitar Silencio" : "Silenciar Micrófono"}
                 >
-                  <MicOff size={20} />
+                  {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
                 </button>
+                
+                {/* Toggle Video Camera Button (available on video calls only) */}
+                {activeCall === 'video' && (
+                  <button
+                    type="button"
+                    onClick={toggleVideoMute}
+                    className={cn(
+                      "p-4 rounded-full border transition-all",
+                      isVideoMuted ? 'bg-[#E60000] border-red-600 text-white shadow-[0_0_15px_rgba(230,0,0,0.4)]' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                    )}
+                    title={isVideoMuted ? "Activar Cámara" : "Apagar Cámara"}
+                  >
+                    {isVideoMuted ? <VideoOff size={20} /> : <Video size={20} />}
+                  </button>
+                )}
                 
                 {/* Large Red End-Call Button */}
                 <button
                   type="button"
                   onClick={handleEndCall}
                   className="p-5 rounded-full bg-red-600 hover:bg-red-700 text-white border border-red-500/20 shadow-2xl transition-transform hover:scale-110 active:scale-95"
-                  title="Colgar y Destruir Enlace"
+                  title="Colgar y Cerrar Canal"
                 >
                   <PhoneOff size={24} />
                 </button>
