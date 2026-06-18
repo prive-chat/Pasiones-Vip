@@ -194,20 +194,25 @@ app.post("/api/send-push", async (req, res) => {
 });
 
 async function setupServer() {
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production" && process.env.VERCEL !== "1") {
+  const isVercel = process.env.VERCEL === "1";
+  const distPath = path.join(process.cwd(), "dist");
+  const hasDist = fs.existsSync(distPath);
+
+  // If not on Vercel and (either not in production or the compiled dist folder is missing), mount Vite dev server middleware
+  if (!isVercel && (process.env.NODE_ENV !== "production" || !hasDist)) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
+    console.log("Vite development middleware mounted successfully.");
   } else {
-    const distPath = path.join(process.cwd(), "dist");
-    if (fs.existsSync(distPath)) {
+    if (hasDist) {
       app.use(express.static(distPath));
       app.get("*", (req, res) => {
         res.sendFile(path.join(distPath, "index.html"));
       });
+      console.log("Serving compiled static files from dist.");
     }
   }
 
