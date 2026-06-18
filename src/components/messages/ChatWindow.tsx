@@ -147,7 +147,7 @@ export const ChatWindow: FC<ChatWindowProps> = ({
     setIsMuted(false);
     setIsVideoMuted(false);
 
-    let appId = import.meta.env.VITE_AGORA_APP_ID || '';
+    const appId = import.meta.env.VITE_AGORA_APP_ID || '';
     // Ensure deterministic clean channel name under 64 characters limit
     const cleanId1 = (currentUser?.id || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
     const cleanId2 = (targetUser?.id || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
@@ -155,20 +155,6 @@ export const ChatWindow: FC<ChatWindowProps> = ({
 
     // Clean and shorten user identification tracking
     const uid = (currentUser?.id || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 32) || Math.floor(Math.random() * 10000).toString();
-
-    let token: string | null = null;
-    try {
-      const response = await fetch(`/api/agora-token?channelName=${encodeURIComponent(channelName)}&uid=${encodeURIComponent(uid)}`);
-      if (response.ok) {
-        const data = await response.json();
-        token = data.token || null;
-        if (data.appId) {
-          appId = data.appId;
-        }
-      }
-    } catch (err) {
-      console.warn('Could not retrieve secure Agora token from server, attempting connection without token:', err);
-    }
 
     try {
       // 1. Instantiate the modern NextGen Agora RTC Client
@@ -222,7 +208,7 @@ export const ChatWindow: FC<ChatWindowProps> = ({
 
       // 3. Connect to the room
       if (appId) {
-        await client.join(appId, channelName, token, uid);
+        await client.join(appId, channelName, null, uid);
         setAgoraJoined(true);
 
         const publishTracks = [];

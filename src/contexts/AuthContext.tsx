@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { UserProfile } from '../types';
@@ -17,13 +17,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const userRef = useRef<User | null>(null);
-  const profileRef = useRef<UserProfile | null>(null);
-  
-  // Sync state with mutable refs to prevent stale closure in the mount effect
-  userRef.current = user;
-  profileRef.current = profile;
 
   const fetchProfile = async (userId: string, authUserEmail?: string) => {
     // Solo poner loading si no tenemos perfil o es cambio de usuario
@@ -112,8 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('Auth event:', event);
       
       if (session?.user) {
-        const currentUser = userRef.current;
-        const isNewUser = !currentUser || currentUser.id !== session.user.id;
+        const isNewUser = !user || user.id !== session.user.id;
         setUser(session.user);
         
         // Evitar fetch profile si el evento no es relevante y ya tenemos perfil
@@ -121,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           fetchProfile(session.user.id, session.user.email);
         } else {
            setLoading(false);
-         }
+        }
       } else {
         setUser(null);
         setProfile(null);
@@ -133,7 +125,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
       clearTimeout(timeoutId);
     };
-  }, []);
+  }, [user?.id, profile?.id]);
+
+  useEffect(() => {
+    // Loading is handled within getSession and onAuthStateChange
+  }, [user, profile]);
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, refreshProfile, signOut }}>
