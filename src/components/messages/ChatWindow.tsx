@@ -148,8 +148,13 @@ export const ChatWindow: FC<ChatWindowProps> = ({
     setIsVideoMuted(false);
 
     const appId = import.meta.env.VITE_AGORA_APP_ID || '';
-    const channelName = [currentUser?.id, targetUser?.id].sort().filter(Boolean).join('-');
-    const uid = currentUser?.id || Math.floor(Math.random() * 10000).toString();
+    // Ensure deterministic clean channel name under 64 characters limit
+    const cleanId1 = (currentUser?.id || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
+    const cleanId2 = (targetUser?.id || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 24);
+    const channelName = [cleanId1, cleanId2].sort().join('-');
+
+    // Clean and shorten user identification tracking
+    const uid = (currentUser?.id || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 32) || Math.floor(Math.random() * 10000).toString();
 
     try {
       // 1. Instantiate the modern NextGen Agora RTC Client
