@@ -6,6 +6,7 @@ import { createServer as createViteServer } from "vite";
 import webpush from "web-push";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
+import { RtcTokenBuilder, RtcRole } from "agora-token";
 
 dotenv.config();
 
@@ -25,16 +26,71 @@ const PORT = 3000;
 
 app.use(express.json());
 
-// Supabase Client for backend operations
-const rawUrl = process.env.VITE_SUPABASE_URL || "";
-const supabaseUrl = rawUrl.replace(/\/+$/, '').replace(/\/rest\/v1$/, '') || "https://vqbupjnuveflshlhsmjz.supabase.co";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
+// Supabase Client lazy-loaded for backend operations to prevent startup crashes when keys are missing
+let supabaseClient: any = null;
+function getSupabase() {
+  if (!supabaseClient) {
+    const rawUrl = process.env.VITE_SUPABASE_URL || "";
+    const supabaseUrl = rawUrl.replace(/\/+$/, '').replace(/\/rest\/v1$/, '') || "https://vqbupjnuveflshlhsmjz.supabase.co";
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    if (!supabaseServiceKey) {
+      throw new Error("Supabase service key or anon key is missing. Active configuration is required for push operations.");
+    }
+    supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+  }
+  return supabaseClient;
+}
 
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
+});
+
+// Agora RTC Token Generator
+app.get("/api/agora-token", (req, res) => {
+  const channelName = req.query.channelName as string;
+  const uid = req.query.uid as string;
+
+  if (!channelName) {
+    return res.status(400).json({ error: "channelName is required" });
+  }
+
+  const appId = process.env.AGORA_APP_ID || process.env.VITE_AGORA_APP_ID || "";
+  const appCertificate = process.env.AGORA_APP_CERTIFICATE || process.env.VITE_AGORA_APP_CERTIFICATE || "";
+
+  if (!appId) {
+    return res.status(500).json({ error: "Agora App ID (VITE_AGORA_APP_ID) is not configured on the server." });
+  }
+
+  // If there's no App Certificate, token is not strictly required or can be empty
+  if (!appCertificate) {
+    console.warn("Agora App Certificate is not configured. Joining with empty token (testing mode).");
+    return res.json({ token: "", appId });
+  }
+
+  try {
+    const role = RtcRole.PUBLISHER;
+    const expirationTimeInSeconds = 3600; // 1 hour
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
+
+    // Use User Account (string) based token builder since we use string user IDs in the frontend
+    const token = RtcTokenBuilder.buildTokenWithUserAccount(
+      appId,
+      appCertificate,
+      channelName,
+      uid || "",
+      role,
+      privilegeExpiredTs,
+      privilegeExpiredTs
+    );
+
+    res.json({ token, appId });
+  } catch (err: any) {
+    console.error("Error generating Agora token:", err);
+    res.status(500).json({ error: "Failed to generate Agora RTC token: " + err.message });
+  }
 });
 
 // Auto country detection by client IP address
@@ -88,6 +144,7 @@ app.post("/api/send-push", async (req, res) => {
     }
 
     // NOTE: Here we require SUPABASE_SERVICE_ROLE_KEY to bypass RLS and fetch all user subscriptions
+    const supabase = getSupabase();
     const { data: subscriptions, error } = await supabase
       .from("push_subscriptions")
       .select("*")
