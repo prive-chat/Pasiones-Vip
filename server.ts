@@ -40,7 +40,37 @@ app.get("/api/health", (req, res) => {
 // Auto country detection by client IP address
 app.get("/api/detect-country", async (req, res) => {
   try {
-    const rawIp = (req.headers["x-forwarded-for"] as string || req.ip || "").trim();
+    // 1. Direct Edge Proxy Geolocation Headers (High priority, fast and 100% accurate)
+    const vercelCountry = req.headers["x-vercel-ip-country"] as string;
+    const cfCountry = req.headers["cf-ipcountry"] as string;
+    const gaeCountry = req.headers["x-appengine-country"] as string;
+    const detectedCountryCode = (vercelCountry || cfCountry || gaeCountry || "").trim().toUpperCase();
+
+    const countryMap: Record<string, { key: string; name: string }> = {
+      'ES': { key: 'espana', name: 'España' },
+      'EC': { key: 'ecuador', name: 'Ecuador' },
+      'CO': { key: 'colombia', name: 'Colombia' },
+      'MX': { key: 'mexico', name: 'México' },
+      'US': { key: 'usa', name: 'Estados Unidos' },
+      'AR': { key: 'argentina', name: 'Argentina' },
+      'PE': { key: 'peru', name: 'Perú' },
+      'VE': { key: 'venezuela', name: 'Venezuela' },
+      'CL': { key: 'chile', name: 'Chile' }
+    };
+
+    if (detectedCountryCode && countryMap[detectedCountryCode]) {
+      return res.json({
+        status: "success",
+        source: "header",
+        countryCode: detectedCountryCode,
+        country: countryMap[detectedCountryCode].name,
+        countryKey: countryMap[detectedCountryCode].key
+      });
+    }
+
+    // 2. Fallback to IP geolocation
+    const rawIp = (req.headers["x-forwarded-for"] as string || req.headers["x-real-ip"] as string || req.ip || "").trim();
+    // In multi-hop configurations, the leftmost IP in X-Forwarded-For is the real user IP
     const clientIp = rawIp.split(",")[0].trim();
     
     // Check for private IPs or localhost
@@ -49,24 +79,86 @@ app.get("/api/detect-country", async (req, res) => {
                     clientIp === "::1" || 
                     clientIp.startsWith("10.") || 
                     clientIp.startsWith("192.168.") || 
-                    clientIp.startsWith("172.");
+                    clientIp.startsWith("172.") ||
+                    clientIp.startsWith("169.254"); // GCP/AWS metadata & link-local
 
-    // Query IP details
-    const targetUrl = isLocal ? "http://ip-api.com/json/" : `http://ip-api.com/json/${clientIp}`;
-    const response = await fetch(targetUrl);
-    const data = await response.json();
-    
+    let data: any = {};
+    let success = false;
+
+    if (!isLocal) {
+      // 1st tier: ip-api.com
+      try {
+        const response = await fetch(`http://ip-api.com/json/${clientIp}`);
+        if (response.ok) {
+          const json = await response.json();
+          if (json && json.status === "success" && json.countryCode) {
+            data = {
+              countryCode: json.countryCode.toUpperCase(),
+              country: json.country
+            };
+            success = true;
+          }
+        }
+      } catch (e) {
+        console.error("ip-api fails:", e);
+      }
+
+      // 2nd tier: ipapi.co (fallback)
+      if (!success) {
+        try {
+          const response = await fetch(`https://ipapi.co/${clientIp}/json/`);
+          if (response.ok) {
+            const json = await response.json();
+            if (json && !json.error && json.country_code) {
+              data = {
+                countryCode: json.country_code.toUpperCase(),
+                country: json.country_name
+              };
+              success = true;
+            }
+          }
+        } catch (e) {
+          console.error("ipapi.co fails:", e);
+        }
+      }
+
+      // 3rd tier: ipwho.is (fallback)
+      if (!success) {
+        try {
+          const response = await fetch(`https://ipwho.is/${clientIp}`);
+          if (response.ok) {
+            const json = await response.json();
+            if (json && json.success && json.country_code) {
+              data = {
+                countryCode: json.country_code.toUpperCase(),
+                country: json.country
+              };
+              success = true;
+            }
+          }
+        } catch (e) {
+          console.error("ipwho.is fails:", e);
+        }
+      }
+    }
+
+    // Default fallback to "ES" if local or all APIs failed
+    const finalCode = data.countryCode || (detectedCountryCode && detectedCountryCode !== "" ? detectedCountryCode : "ES");
+    const mappedObj = countryMap[finalCode] || { key: "otros", name: data.country || "España" };
+
     res.json({
-      status: "success",
+      status: success || detectedCountryCode ? "success" : "fallback",
       ip: clientIp || "local",
-      countryCode: data.countryCode || "ES", // Default fallback if offline or failed
-      country: data.country || "España"
+      countryCode: finalCode,
+      country: mappedObj.name,
+      countryKey: mappedObj.key
     });
   } catch (error: any) {
     res.json({
       status: "error",
       countryCode: "ES",
       country: "España",
+      countryKey: "espana",
       error: error.message
     });
   }

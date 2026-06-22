@@ -42,6 +42,7 @@ export default function SettingsPage() {
   const [showCustomEyes, setShowCustomEyes] = useState(false);
   const [customService, setCustomService] = useState('');
   const [showCustomService, setShowCustomService] = useState(false);
+  const [isCountryUnlocked, setIsCountryUnlocked] = useState(false);
   const [detectedCountryCode, setDetectedCountryCode] = useState<string>('');
   const [detectedCountryName, setDetectedCountryName] = useState<string>('');
   const [isDetectingCountry, setIsDetectingCountry] = useState<boolean>(false);
@@ -121,7 +122,31 @@ export default function SettingsPage() {
 
   // Automatically detect user's country from server IP geo API for security
   useEffect(() => {
+    if (!profile) return;
+
     async function detectUserCountry() {
+      // Parse profile bio to check if there is already a stored country key
+      const { metadata } = parseProfileBio(profile.bio || '');
+      
+      if (metadata && metadata.country) {
+        // Use previously saved country from profile settings (protect it from live overwrite)
+        setCountry(metadata.country);
+        
+        // Still fetch the country code from IP to render the verified badge correctly
+        try {
+          const response = await fetch('/api/detect-country');
+          const data = await response.json();
+          if (data && data.countryCode) {
+            setDetectedCountryCode(data.countryCode);
+            setDetectedCountryName(data.country);
+          }
+        } catch (err) {
+          console.error('Error fetching verification IP:', err);
+        }
+        return;
+      }
+
+      // If no country has been set in the profile yet, run auto-fill based on live IP
       setIsDetectingCountry(true);
       try {
         const response = await fetch('/api/detect-country');
@@ -157,7 +182,7 @@ export default function SettingsPage() {
     }
     
     detectUserCountry();
-  }, []);
+  }, [profile]);
 
   useEffect(() => {
     if (profile) {
@@ -758,19 +783,34 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Country Selection (Locked/Auto-detected for safety as requested) */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-black uppercase tracking-wider text-white/40 ml-1">País de Residencia</label>
+                       {/* Country Selection (Dynamic Autodetected or Manual selection) */}
+                      <div className="space-y-1.5 ">
+                        <div className="flex justify-between items-center">
+                          <label className="text-xs font-black uppercase tracking-wider text-white/40 ml-1">País de Residencia</label>
+                          {!isCountryUnlocked && (
+                            <button
+                              type="button"
+                              onClick={() => setIsCountryUnlocked(true)}
+                              className="text-[10px] text-primary-400 hover:text-primary-300 font-bold tracking-wider uppercase cursor-pointer hover:underline focus:outline-none"
+                            >
+                              Cambiar manualmente
+                            </button>
+                          )}
+                        </div>
                         <div className="relative">
                           <select
-                            disabled // Locked for platform security & verification!
+                            disabled={!isCountryUnlocked} // Unlocked if manually requested
                             value={country}
                             onChange={(e) => {
                               setCountry(e.target.value);
                               setProvince('');
                               setCity('');
                             }}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold opacity-80 cursor-not-allowed"
+                            className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold transition-all ${
+                              !isCountryUnlocked 
+                                ? "opacity-75 cursor-not-allowed" 
+                                : "focus:outline-none focus:ring-2 focus:ring-[#E60000]/50"
+                            }`}
                           >
                             {Object.entries(WORLD_COUNTRIES).map(([key, item]) => (
                               <option key={key} value={key} className="bg-zinc-900 text-white font-bold">
