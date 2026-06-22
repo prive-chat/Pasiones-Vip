@@ -35,6 +35,13 @@ export default function SettingsPage() {
   const [service, setService] = useState<string>('GFe (Novia)');
   const [country, setCountry] = useState<string>('espana');
   const [province, setProvince] = useState<string>('');
+
+  const [customHair, setCustomHair] = useState('');
+  const [showCustomHair, setShowCustomHair] = useState(false);
+  const [customEyes, setCustomEyes] = useState('');
+  const [showCustomEyes, setShowCustomEyes] = useState(false);
+  const [customService, setCustomService] = useState('');
+  const [showCustomService, setShowCustomService] = useState(false);
   const [detectedCountryCode, setDetectedCountryCode] = useState<string>('');
   const [detectedCountryName, setDetectedCountryName] = useState<string>('');
   const [isDetectingCountry, setIsDetectingCountry] = useState<boolean>(false);
@@ -167,9 +174,56 @@ export default function SettingsPage() {
       setIsPrivate(profile.is_private || false);
 
       if (metadata.age) setAge(metadata.age);
-      if (metadata.hair) setHair(metadata.hair);
-      if (metadata.eyes) setEyes(metadata.eyes);
-      if (metadata.service) setService(metadata.service);
+      
+      if (metadata.hair) {
+        const standardHairOptions = ['Rubio', 'Castaño', 'Negro', 'Pelirrojo', 'Platino', 'Gris / Cano', 'Calvo', 'Fantasía'];
+        if (standardHairOptions.includes(metadata.hair)) {
+          setHair(metadata.hair);
+          setShowCustomHair(false);
+        } else {
+          setHair('Otro');
+          setCustomHair(metadata.hair);
+          setShowCustomHair(true);
+        }
+      }
+      
+      if (metadata.eyes) {
+        const standardEyesOptions = ['Azul', 'Verde', 'Miel', 'Oscuro', 'Marrón Claro', 'Gris'];
+        if (standardEyesOptions.includes(metadata.eyes)) {
+          setEyes(metadata.eyes);
+          setShowCustomEyes(false);
+        } else {
+          setEyes('Otro');
+          setCustomEyes(metadata.eyes);
+          setShowCustomEyes(true);
+        }
+      }
+      
+      if (metadata.service) {
+        const standardServiceOptions = [
+          'Amistad',
+          'Pasatiempo',
+          'Conversación',
+          'Acompañante de Eventos',
+          'Relación Seria',
+          'Guía de Viajes',
+          'Ocio',
+          'GFe (Novia)',
+          'BDSM Premium',
+          'Masaje Sensual',
+          'Cena VIP',
+          'Viajes Exóticos'
+        ];
+        if (standardServiceOptions.includes(metadata.service)) {
+          setService(metadata.service);
+          setShowCustomService(false);
+        } else {
+          setService('Otro');
+          setCustomService(metadata.service);
+          setShowCustomService(true);
+        }
+      }
+      
       if (metadata.country) setCountry(metadata.country);
       if (metadata.province) setProvince(metadata.province);
     }
@@ -190,11 +244,15 @@ export default function SettingsPage() {
     setMessage(null);
 
     try {
+      const finalHair = hair === 'Otro' ? (customHair.trim() || 'Otro') : hair;
+      const finalEyes = eyes === 'Otro' ? (customEyes.trim() || 'Otro') : eyes;
+      const finalService = service === 'Otro' ? (customService.trim() || 'Otro') : service;
+
       const metadataBlock = {
         age,
-        hair,
-        eyes,
-        service,
+        hair: finalHair,
+        eyes: finalEyes,
+        service: finalService,
         country,
         province,
         city
@@ -210,7 +268,7 @@ export default function SettingsPage() {
           cover_url: coverUrl,
           bio: finalBio,
           city: city,
-          category: category || service,
+          category: finalService, // Keep category in sync with the current service specialty preference
           is_private: isPrivate,
         })
         .eq('id', user.id);
@@ -799,15 +857,40 @@ export default function SettingsPage() {
                         <label className="text-xs font-black uppercase tracking-wider text-white/40 ml-1">Color de Cabello</label>
                         <select
                           value={hair}
-                          onChange={(e) => setHair(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setHair(val);
+                            if (val === 'Otro') {
+                              setShowCustomHair(true);
+                            } else {
+                              setShowCustomHair(false);
+                            }
+                          }}
                           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold focus:outline-none focus:ring-2 focus:ring-[#E60000]/50"
                         >
-                          {['Rubio', 'Castaño', 'Negro', 'Pelirrojo', 'Platino'].map((h) => (
+                          {['Rubio', 'Castaño', 'Negro', 'Pelirrojo', 'Platino', 'Gris / Cano', 'Calvo', 'Fantasía', 'Otro'].map((h) => (
                             <option key={h} value={h} className="bg-zinc-900 text-white font-bold">
-                              {h}
+                              {h === 'Otro' ? 'Otro / Personalizado...' : h}
                             </option>
                           ))}
                         </select>
+
+                        {/* Custom Hair color manual input */}
+                        {hair === 'Otro' && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="pt-1.5"
+                          >
+                            <input
+                              type="text"
+                              value={customHair}
+                              onChange={(e) => setCustomHair(e.target.value)}
+                              placeholder="Escribe tu color de cabello..."
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white font-bold placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#E60000]/50"
+                            />
+                          </motion.div>
+                        )}
                       </div>
 
                       {/* Eye Color */}
@@ -815,15 +898,40 @@ export default function SettingsPage() {
                         <label className="text-xs font-black uppercase tracking-wider text-white/40 ml-1">Color de Ojos</label>
                         <select
                           value={eyes}
-                          onChange={(e) => setEyes(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEyes(val);
+                            if (val === 'Otro') {
+                              setShowCustomEyes(true);
+                            } else {
+                              setShowCustomEyes(false);
+                            }
+                          }}
                           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold focus:outline-none focus:ring-2 focus:ring-[#E60000]/50"
                         >
-                          {['Azul', 'Verde', 'Miel', 'Oscuro'].map((ey) => (
+                          {['Azul', 'Verde', 'Miel', 'Oscuro', 'Marrón Claro', 'Gris', 'Otro'].map((ey) => (
                             <option key={ey} value={ey} className="bg-zinc-900 text-white font-bold">
-                              {ey}
+                              {ey === 'Otro' ? 'Otro / Personalizado...' : ey}
                             </option>
                           ))}
                         </select>
+
+                        {/* Custom Eye color manual input */}
+                        {eyes === 'Otro' && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="pt-1.5"
+                          >
+                            <input
+                              type="text"
+                              value={customEyes}
+                              onChange={(e) => setCustomEyes(e.target.value)}
+                              placeholder="Escribe tu color de ojos..."
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white font-bold placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#E60000]/50"
+                            />
+                          </motion.div>
+                        )}
                       </div>
 
                       {/* Favorite/Premium Specialty Service */}
@@ -832,17 +940,58 @@ export default function SettingsPage() {
                         <select
                           value={service}
                           onChange={(e) => {
-                            setService(e.target.value);
-                            setCategory(e.target.value); // Sync to category
+                            const val = e.target.value;
+                            setService(val);
+                            if (val === 'Otro') {
+                              setShowCustomService(true);
+                              setCategory(''); // Custom input will update category state
+                            } else {
+                              setShowCustomService(false);
+                              setCategory(val); // Sync with category
+                            }
                           }}
                           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white font-bold focus:outline-none focus:ring-2 focus:ring-[#E60000]/50"
                         >
-                          {['GFe (Novia)', 'BDSM Premium', 'Masaje Sensual', 'Cena VIP', 'Viajes Exóticos'].map((s) => (
+                          {[
+                            'Amistad',
+                            'Pasatiempo',
+                            'Conversación',
+                            'Acompañante de Eventos',
+                            'Relación Seria',
+                            'Guía de Viajes',
+                            'Ocio',
+                            'GFe (Novia)',
+                            'BDSM Premium',
+                            'Masaje Sensual',
+                            'Cena VIP',
+                            'Viajes Exóticos',
+                            'Otro'
+                          ].map((s) => (
                             <option key={s} value={s} className="bg-zinc-900 text-white font-bold">
-                              {s}
+                              {s === 'Otro' ? 'Otro / Personalizado...' : s}
                             </option>
                           ))}
                         </select>
+
+                        {/* Custom service manual input */}
+                        {service === 'Otro' && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="pt-1.5"
+                          >
+                            <input
+                              type="text"
+                              value={customService}
+                              onChange={(e) => {
+                                setCustomService(e.target.value);
+                                setCategory(e.target.value); // Keep sync
+                              }}
+                              placeholder="Escribe tu especialidad o servicio personalizado..."
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white font-bold placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#E60000]/50"
+                            />
+                          </motion.div>
+                        )}
                       </div>
                     </div>
                   </div>

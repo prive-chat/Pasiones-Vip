@@ -22,10 +22,23 @@ function getDeterministicSpecs(id: string) {
   }
   const uHash = Math.abs(hash);
   
-  const ages = [21, 23, 24, 26, 28, 30, 32, 22, 25, 27];
-  const hairColors = ['Rubio', 'Castaño', 'Negro', 'Pelirrojo', 'Platino'];
-  const eyeColors = ['Azul', 'Verde', 'Miel', 'Oscuro'];
-  const services = ['GFe (Novia)', 'BDSM Premium', 'Masaje Sensual', 'Cena VIP', 'Viajes Exóticos'];
+  const ages = [21, 23, 24, 26, 28, 30, 32, 22, 25, 27, 29, 31, 33];
+  const hairColors = ['Rubio', 'Castaño', 'Negro', 'Pelirrojo', 'Platino', 'Gris / Cano', 'Calvo', 'Fantasía'];
+  const eyeColors = ['Azul', 'Verde', 'Miel', 'Oscuro', 'Marrón Claro', 'Gris'];
+  const services = [
+    'Amistad',
+    'Pasatiempo',
+    'Conversación',
+    'Acompañante de Eventos',
+    'Relación Seria',
+    'Guía de Viajes',
+    'Ocio',
+    'GFe (Novia)',
+    'BDSM Premium',
+    'Masaje Sensual',
+    'Cena VIP',
+    'Viajes Exóticos'
+  ];
   const ratings = [4.8, 4.9, 5.0, 4.7, 4.9];
 
   return {
@@ -461,9 +474,12 @@ export default function UserDirectory() {
                       <option value="any">Todos los Colores</option>
                       <option value="Rubio">Rubio</option>
                       <option value="Castaño">Castaño</option>
-                      <option value="Pelirrojo">Pelirrojo</option>
                       <option value="Negro">Negro</option>
+                      <option value="Pelirrojo">Pelirrojo</option>
                       <option value="Platino">Platino</option>
+                      <option value="Gris / Cano">Gris / Cano</option>
+                      <option value="Calvo">Calvo</option>
+                      <option value="Fantasía">Fantasía</option>
                     </select>
                   </div>
 
@@ -479,6 +495,8 @@ export default function UserDirectory() {
                       <option value="Verde">Verde</option>
                       <option value="Miel">Miel</option>
                       <option value="Oscuro">Oscuro</option>
+                      <option value="Marrón Claro">Marrón Claro</option>
+                      <option value="Gris">Gris</option>
                     </select>
                   </div>
                 </div>
@@ -493,6 +511,13 @@ export default function UserDirectory() {
                       className="bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-primary-500 text-white"
                     >
                       <option value="any">Cualquier Especialidad</option>
+                      <option value="Amistad">Amistad</option>
+                      <option value="Pasatiempo">Pasatiempo</option>
+                      <option value="Conversación">Conversación</option>
+                      <option value="Acompañante de Eventos">Acompañante de Eventos</option>
+                      <option value="Relación Seria">Relación Seria</option>
+                      <option value="Guía de Viajes">Guía de Viajes</option>
+                      <option value="Ocio">Ocio</option>
                       <option value="GFe (Novia)">GFe (Novia)</option>
                       <option value="BDSM Premium">BDSM Premium</option>
                       <option value="Masaje Sensual">Masaje Sensual</option>

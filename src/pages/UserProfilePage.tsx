@@ -267,9 +267,9 @@ export default function UserProfilePage() {
             {profile.username && (
               <p className="text-lg font-medium text-primary-400">@{profile.username}</p>
             )}
-            {profile.bio && (
+            {profile.bio && parseProfileBio(profile.bio).cleanBio && (
               <p className="mt-3 text-sm text-white/80 leading-relaxed max-w-md mx-auto md:mx-0">
-                {profile.bio}
+                {parseProfileBio(profile.bio).cleanBio}
               </p>
             )}
             
