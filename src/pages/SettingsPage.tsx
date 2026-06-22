@@ -30,6 +30,7 @@ export default function SettingsPage() {
   
   // Advanced biological and location specifications
   const [age, setAge] = useState<number>(25);
+  const [birthDate, setBirthDate] = useState<string>('');
   const [hair, setHair] = useState<string>('Rubio');
   const [eyes, setEyes] = useState<string>('Oscuro');
   const [service, setService] = useState<string>('GFe (Novia)');
@@ -199,6 +200,7 @@ export default function SettingsPage() {
       setIsPrivate(profile.is_private || false);
 
       if (metadata.age) setAge(metadata.age);
+      if (metadata.birthDate) setBirthDate(metadata.birthDate);
       
       if (metadata.hair) {
         const standardHairOptions = ['Rubio', 'Castaño', 'Negro', 'Pelirrojo', 'Platino', 'Gris / Cano', 'Calvo', 'Fantasía'];
@@ -275,6 +277,7 @@ export default function SettingsPage() {
 
       const metadataBlock = {
         age,
+        birthDate: birthDate || undefined,
         hair: finalHair,
         eyes: finalEyes,
         service: finalService,
@@ -872,23 +875,59 @@ export default function SettingsPage() {
                     </span>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Age */}
-                      <div className="space-y-1.5 col-span-1 sm:col-span-2">
-                        <div className="flex justify-between items-center">
-                          <label className="text-xs font-black uppercase tracking-wider text-white/40 ml-1">Edad de Trabajo</label>
-                          <span className="text-sm font-black text-white bg-[#E60000]/10 px-2.5 py-0.5 rounded-md text-[#E60000] border border-[#E60000]/20">{age} años</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="18"
-                          max="80"
-                          value={age}
-                          onChange={(e) => setAge(parseInt(e.target.value))}
-                          className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#E60000]"
-                        />
-                        <div className="flex justify-between text-[10px] text-white/30 font-bold">
-                          <span>18 años</span>
-                          <span>80 años</span>
+                      {/* Age & birthdate */}
+                      <div className="space-y-3 col-span-1 sm:col-span-2 bg-white/5 p-4 rounded-xl border border-white/5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* DOB Input */}
+                          <div className="space-y-1.5 justify-center flex flex-col">
+                            <label className="text-xs font-black uppercase tracking-wider text-white/40 ml-1">Fecha de Nacimiento (Opcional)</label>
+                            <input
+                              type="date"
+                              value={birthDate}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setBirthDate(val);
+                                if (val) {
+                                  const today = new Date();
+                                  const birth = new Date(val);
+                                  let calculatedAge = today.getFullYear() - birth.getFullYear();
+                                  const m = today.getMonth() - birth.getMonth();
+                                  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+                                    calculatedAge--;
+                                  }
+                                  if (calculatedAge >= 18 && calculatedAge <= 80) {
+                                    setAge(calculatedAge);
+                                  } else if (calculatedAge < 18) {
+                                    setAge(18);
+                                  } else {
+                                    setAge(80);
+                                  }
+                                }
+                              }}
+                              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white font-bold focus:outline-none focus:ring-2 focus:ring-[#E60000]/50"
+                            />
+                            <p className="text-[10px] text-white/30 ml-1 italic">Calcula tu edad automáticamente al ingresar tu fecha de nacimiento.</p>
+                          </div>
+
+                          {/* Slider / Display */}
+                          <div className="space-y-1.5 flex flex-col justify-center">
+                            <div className="flex justify-between items-center mb-1">
+                              <label className="text-xs font-black uppercase tracking-wider text-white/40 ml-1">Edad de Trabajo</label>
+                              <span className="text-sm font-black text-white bg-[#E60000]/10 px-2.5 py-0.5 rounded-md text-[#E60000] border border-[#E60000]/20">{age} años</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="18"
+                              max="80"
+                              value={age}
+                              onChange={(e) => setAge(parseInt(e.target.value))}
+                              className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#E60000]"
+                            />
+                            <div className="flex justify-between text-[10px] text-white/30 font-bold">
+                              <span>18 años</span>
+                              <span>80 años</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
 

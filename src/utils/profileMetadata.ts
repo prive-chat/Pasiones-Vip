@@ -1,5 +1,6 @@
 export interface ProfileMetadata {
   age?: number;
+  birthDate?: string;
   hair?: string;
   eyes?: string;
   service?: string;
