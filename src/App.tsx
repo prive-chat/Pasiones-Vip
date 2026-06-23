@@ -5,7 +5,6 @@ import Navbar from './components/layout/Navbar';
 import BottomNavigation from './components/layout/BottomNavigation';
 import ModalCenter from './components/layout/ModalCenter';
 import ScrollToTop from './components/layout/ScrollToTop';
-import { InstallPrompt } from './components/ui/InstallPrompt';
 import NotificationManager from './components/notifications/NotificationManager';
 import ToastContainer from './components/notifications/ToastContainer';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,7 +52,6 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
-      <InstallPrompt />
       <div className="min-h-screen bg-black text-white">
         <ToastContainer />
         <Suspense fallback={<LoadingScreen />}>

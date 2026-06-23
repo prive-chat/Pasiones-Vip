@@ -102,20 +102,7 @@ export default function Navbar() {
               {/* Notificaciones */}
               <NotificationDropdown />
 
-              {/* Botón de Instalación PWA (oculto si ya está instalada) */}
-              {!isStandalone && (
-                <button
-                  onClick={() => window.dispatchEvent(new CustomEvent('open-pwa-install-prompt'))}
-                  className="p-2 rounded-lg bg-passion-red/10 border border-passion-red/20 text-passion-red hover:bg-passion-red/20 hover:text-white transition-all cursor-pointer flex items-center justify-center relative group"
-                  title="Instalar Aplicación"
-                >
-                  <Download size={18} className="animate-pulse" />
-                  <span className="absolute -top-1 -right-1 flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-passion-red opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-passion-red"></span>
-                  </span>
-                </button>
-              )}
+
 
               {/* Hamburger Menu Toggle */}
               <Button
@@ -158,18 +145,7 @@ export default function Navbar() {
                         </Link>
                       ))}
 
-                      {!isStandalone && (
-                        <button
-                          onClick={() => {
-                            setIsMenuOpen(false);
-                            window.dispatchEvent(new CustomEvent('open-pwa-install-prompt'));
-                          }}
-                          className="flex w-full items-center space-x-3 rounded-lg px-4 py-3 text-sm font-bold text-white/50 transition-all hover:bg-white/5 hover:text-white"
-                        >
-                          <Download size={18} className="text-passion-red" />
-                          <span>Instalar Aplicación</span>
-                        </button>
-                      )}
+
                       
                       <div className="my-2 h-px bg-white/5" />
                       
