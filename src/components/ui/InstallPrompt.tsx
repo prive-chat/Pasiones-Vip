@@ -72,12 +72,18 @@ export function InstallPrompt() {
       }
     };
 
+    const handleForceOpen = () => {
+      setIsVisible(true);
+    };
+
     window.addEventListener('beforeinstallprompt', handler);
     window.addEventListener('pwa-prompt-available', customHandler as EventListener);
+    window.addEventListener('open-pwa-install-prompt', handleForceOpen);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
       window.removeEventListener('pwa-prompt-available', customHandler as EventListener);
+      window.removeEventListener('open-pwa-install-prompt', handleForceOpen);
     };
   }, []);
 

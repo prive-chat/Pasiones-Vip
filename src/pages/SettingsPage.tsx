@@ -1242,18 +1242,14 @@ export default function SettingsPage() {
                           Toca <Share2 size={14} className="inline text-primary-400 mx-1" /> en tu navegador Safari y elige <span className="font-black italic underline text-white">"Añadir a la pantalla de inicio"</span>.
                         </p>
                       </div>
-                    ) : pwaPrompt ? (
+                    ) : (
                       <Button
-                        onClick={handleInstallApp}
-                        className="w-full sm:w-auto bg-primary-600 hover:bg-primary-500 text-white font-bold px-5 py-2.5 flex items-center justify-center gap-1.5 rounded-xl shadow-lg shadow-primary-600/15"
+                        onClick={() => window.dispatchEvent(new CustomEvent('open-pwa-install-prompt'))}
+                        className="w-full sm:w-auto bg-[#E60000] hover:bg-[#b50000] text-white font-bold px-5 py-2.5 flex items-center justify-center gap-1.5 rounded-xl shadow-lg shadow-passion-red/15 uppercase tracking-wider text-xs"
                       >
                         <Download size={14} />
-                        Instalar App
+                        Instalar o Ver Guía
                       </Button>
-                    ) : (
-                      <div className="p-3 bg-white/5 rounded-xl border border-white/5 text-center sm:text-left text-xs text-white/40">
-                        Usa las opciones de tu navegador para "Añadir a la pantalla de inicio".
-                      </div>
                     )}
                   </div>
                 </div>
