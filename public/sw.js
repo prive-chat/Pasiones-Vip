@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pasiones-vip-v3';
+const CACHE_NAME = 'pasiones-vip-v4';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
