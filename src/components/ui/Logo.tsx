@@ -27,7 +27,7 @@ export const Logo: React.FC<LogoProps> = ({ className = "", size = 64, glow = tr
         />
       )}
       <img
-        src="/icon.png?v=logo-v2"
+        src="/icon.png?v=logo-v3"
         alt="Pasiones VIP Logo"
         width={size}
         height={size}
