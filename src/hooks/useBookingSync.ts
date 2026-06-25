@@ -89,8 +89,9 @@ export function useBookingSync(profileId: string | undefined, isMe: boolean) {
   useEffect(() => {
     if (!currentUser?.id || !profileId) return;
 
+    const channelId = `bookings_sync:${currentUser.id}:${Math.random().toString(36).substring(2, 9)}`;
     const channel = supabase
-      .channel(`bookings_sync:${currentUser.id}`)
+      .channel(channelId)
       .on(
         'postgres_changes',
         {
