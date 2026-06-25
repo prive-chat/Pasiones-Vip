@@ -39,6 +39,8 @@ import { useMutation, useQueryClient, useInfiniteQuery, useQuery } from '@tansta
 import MediaCard from '@/src/components/MediaCard';
 import { Loader2 } from 'lucide-react';
 import { VisitorBookingForm } from '@/src/components/VisitorBookingForm';
+import { useBookingSync } from '@/src/hooks/useBookingSync';
+import { notificationService } from '@/src/services/notificationService';
 import { ProfileSkeleton } from '@/src/components/Skeletons';
 import { useUserStats } from '@/src/hooks/useUserStats';
 import { Input } from '@/src/components/ui/Input';
@@ -58,6 +60,7 @@ export default function UserProfilePage() {
   const [followStatus, setFollowStatus] = useState<'none' | 'pending' | 'accepted'>('none');
   const { user: currentUser, profile: currentUserProfile } = useAuth();
   const isMe = currentUser?.id === userId;
+  const { bookings: myBookings, refresh: refreshBookings } = useBookingSync(userId, isMe);
   const observerTarget = useRef(null);
   const addToast = useNotificationStore((state) => state.addToast);
 
@@ -514,9 +517,6 @@ export default function UserProfilePage() {
                 <div className="space-y-6">
                   <h3 className="text-sm font-bold text-white uppercase tracking-widest italic px-1">Solicitudes de Citas Recibidas</h3>
                   {(() => {
-                    const allBookings = JSON.parse(localStorage.getItem('pasiones_vip_bookings') || '[]');
-                    const myBookings = allBookings.filter((b: any) => b.profileId === profile?.id);
-                    
                     if (myBookings.length === 0) {
                       return (
                         <div className="flex flex-col items-center justify-center py-12 text-center bg-white/5 rounded-2xl border border-white/5">
@@ -557,11 +557,26 @@ export default function UserProfilePage() {
                               <div className="flex items-center gap-2 shrink-0 md:justify-end">
                                 <Button
                                   size="sm"
-                                  onClick={() => {
+                                  onClick={async () => {
+                                    const allBookings = JSON.parse(localStorage.getItem('pasiones_vip_bookings') || '[]');
                                     const updated = allBookings.map((item: any) => item.id === b.id ? { ...item, status: 'accepted' } : item);
                                     localStorage.setItem('pasiones_vip_bookings', JSON.stringify(updated));
-                                    addToast({ type: 'success', message: 'Cita Aceptada', description: 'Has aceptado la reservación. Se notificará al cliente.' });
-                                    setActiveTab('agenda'); // Force re-render
+                                    
+                                    try {
+                                      await notificationService.createNotification({
+                                        user_id: b.clientId,
+                                        sender_id: currentUser?.id,
+                                        type: 'system',
+                                        title: `[BOOKING_ACCEPT] Cita Aceptada`,
+                                        content: JSON.stringify({ id: b.id, status: 'accepted' }),
+                                        link: `/profile/${profile?.id}?tab=agenda`
+                                      });
+                                    } catch (err) {
+                                      console.error('Error sending accept notification:', err);
+                                    }
+
+                                    addToast({ type: 'success', message: 'Cita Aceptada 🎉', description: 'Has aceptado la reservación. Se notificará al cliente.' });
+                                    refreshBookings();
                                   }}
                                   className="bg-green-500 hover:bg-green-600 text-black font-black uppercase tracking-widest text-[9px] h-9 px-3"
                                 >
@@ -570,11 +585,26 @@ export default function UserProfilePage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => {
+                                  onClick={async () => {
+                                    const allBookings = JSON.parse(localStorage.getItem('pasiones_vip_bookings') || '[]');
                                     const updated = allBookings.map((item: any) => item.id === b.id ? { ...item, status: 'rejected' } : item);
                                     localStorage.setItem('pasiones_vip_bookings', JSON.stringify(updated));
-                                    addToast({ type: 'info', message: 'Cita Rechazada', description: 'Has rechazado la reservación.' });
-                                    setActiveTab('agenda'); // Force re-render
+
+                                    try {
+                                      await notificationService.createNotification({
+                                        user_id: b.clientId,
+                                        sender_id: currentUser?.id,
+                                        type: 'system',
+                                        title: `[BOOKING_REJECT] Cita Rechazada`,
+                                        content: JSON.stringify({ id: b.id, status: 'rejected' }),
+                                        link: `/profile/${profile?.id}?tab=agenda`
+                                      });
+                                    } catch (err) {
+                                      console.error('Error sending reject notification:', err);
+                                    }
+
+                                    addToast({ type: 'info', message: 'Cita Rechazada 💔', description: 'Has rechazado la reservación.' });
+                                    refreshBookings();
                                   }}
                                   className="border-red-500/30 hover:bg-red-500/10 text-red-400 font-black uppercase tracking-widest text-[9px] h-9 px-3"
                                 >

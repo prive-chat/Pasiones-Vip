@@ -5,6 +5,8 @@ import { Button } from '@/src/components/ui/Button';
 import { cn } from '@/src/lib/utils';
 import { useAuth } from '@/src/hooks/useAuth';
 import { useNotificationStore } from '@/src/store/notificationStore';
+import { useBookingSync } from '@/src/hooks/useBookingSync';
+import { notificationService } from '@/src/services/notificationService';
 
 interface VisitorBookingFormProps {
   profile: UserProfile | null;
@@ -14,6 +16,7 @@ interface VisitorBookingFormProps {
 export function VisitorBookingForm({ profile, setActiveTab }: VisitorBookingFormProps) {
   const { user: currentUser, profile: currentUserProfile } = useAuth();
   const addToast = useNotificationStore((state) => state.addToast);
+  const { bookings: visitorBookings, refresh } = useBookingSync(profile?.id, false);
 
   const [bookingDay, setBookingDay] = useState('');
   const [bookingSlot, setBookingSlot] = useState('Noche/VIP (19:00 - 02:00)');
@@ -38,11 +41,13 @@ export function VisitorBookingForm({ profile, setActiveTab }: VisitorBookingForm
     }
   }, [bookingDay, days]);
 
-  const handleCreateBooking = () => {
+  const handleCreateBooking = async () => {
     if (!currentUser) {
       addToast({ type: 'error', message: 'Inicia Sesión', description: 'Debes tener una cuenta registrada para reservar.' });
       return;
     }
+
+    if (!profile?.id) return;
 
     const allBookings = JSON.parse(localStorage.getItem('pasiones_vip_bookings') || '[]');
     
@@ -66,6 +71,20 @@ export function VisitorBookingForm({ profile, setActiveTab }: VisitorBookingForm
 
     allBookings.push(newBooking);
     localStorage.setItem('pasiones_vip_bookings', JSON.stringify(allBookings));
+
+    // Send real-time database notification to the creator
+    try {
+      await notificationService.createNotification({
+        user_id: profile.id, // Creator gets notification
+        sender_id: currentUser.id, // Client sent it
+        type: 'system',
+        title: `[BOOKING_REQUEST] Cita de ${newBooking.clientName}`,
+        content: JSON.stringify(newBooking),
+        link: `/profile/${profile.id}?tab=agenda`
+      });
+    } catch (err) {
+      console.error('Error sending booking notification to creator:', err);
+    }
     
     addToast({
       type: 'success',
@@ -74,11 +93,9 @@ export function VisitorBookingForm({ profile, setActiveTab }: VisitorBookingForm
     });
     
     setBookingNotes('');
+    refresh(); // Trigger local state update
     setActiveTab('agenda'); // Force re-render
   };
-
-  const visitorBookings = JSON.parse(localStorage.getItem('pasiones_vip_bookings') || '[]')
-    .filter((b: any) => b.profileId === profile?.id && b.clientId === currentUser?.id);
 
   return (
     <Card className="glass-card border-none p-6 md:p-8">
