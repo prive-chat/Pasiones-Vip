@@ -290,7 +290,7 @@ FOR ALL USING (auth.uid() = user_id);
 
 -- NOTIFICATIONS
 DROP POLICY IF EXISTS "Usuarios ven sus notificaciones" ON public.notifications;
-CREATE POLICY "Usuarios ven sus notificaciones" ON public.notifications FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Usuarios ven sus notificaciones" ON public.notifications FOR SELECT USING (auth.uid() = user_id OR auth.uid() = sender_id);
 
 DROP POLICY IF EXISTS "Usuarios gestionan sus notificaciones" ON public.notifications;
 CREATE POLICY "Usuarios gestionan sus notificaciones" ON public.notifications FOR ALL USING (auth.uid() = user_id);
