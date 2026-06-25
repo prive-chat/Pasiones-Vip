@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import { notificationService } from '../../services/notificationService';
 import { supabase } from '../../lib/supabase';
-import { Home, MessageSquare, Bell, User, Settings, X, Check, Trash2, ShieldCheck, Heart, UserPlus, UserCheck, Info, Loader2 } from 'lucide-react';
+import { Home, MessageSquare, Bell, User, Settings, X, Check, Trash2, ShieldCheck, Heart, UserPlus, UserCheck, Info, Loader2, Calendar } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
@@ -96,10 +96,10 @@ export default function BottomNavigation() {
 
   const menuItems = [
     {
-      label: 'Ajustes',
-      icon: Settings,
-      path: '/settings',
-      active: location.pathname === '/settings',
+      label: 'Citas',
+      icon: Calendar,
+      path: '/citas',
+      active: location.pathname === '/citas',
     },
     {
       label: 'Chat',

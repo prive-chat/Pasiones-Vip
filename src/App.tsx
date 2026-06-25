@@ -19,6 +19,7 @@ import UserProfilePage from './pages/UserProfilePage';
 import PostPage from './pages/PostPage';
 import NotFoundPage from './pages/NotFoundPage';
 import AdminPage from './pages/AdminPage';
+import BookingsPage from './pages/BookingsPage';
 
 import { Logo } from './components/ui/Logo';
 
@@ -70,6 +71,7 @@ export default function App() {
                 <Route path="/" element={user ? <PageTransition><HomePage /></PageTransition> : <Navigate to="/auth" replace />} />
                 <Route path="/messages" element={user ? <PageTransition><MessagesPage /></PageTransition> : <Navigate to="/auth" replace />} />
                 <Route path="/settings" element={user ? <PageTransition><SettingsPage /></PageTransition> : <Navigate to="/auth" replace />} />
+                <Route path="/citas" element={user ? <PageTransition><BookingsPage /></PageTransition> : <Navigate to="/auth" replace />} />
                 
                 {profile?.role?.toLowerCase().trim() === 'super_admin' && (
                   <Route path="/admin" element={user ? <PageTransition><AdminPage /></PageTransition> : <Navigate to="/auth" replace />} />

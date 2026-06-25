@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../ui/Button';
-import { Home, LogOut, ShieldCheck, ShieldAlert, Settings, Menu, X, MessageSquare, Download } from 'lucide-react';
+import { Home, LogOut, ShieldCheck, ShieldAlert, Settings, Menu, X, MessageSquare, Download, Calendar } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -60,6 +60,7 @@ export default function Navbar() {
   }, [location]);
 
   const menuItems = [
+    { label: 'Citas', path: '/citas', icon: Calendar },
     { label: 'Mensajes', path: '/messages', icon: MessageSquare },
     { label: 'Ajustes', path: '/settings', icon: Settings },
   ];
