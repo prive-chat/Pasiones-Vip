@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { notificationService } from '../services/notificationService';
 import { useNotificationStore } from '../store/notificationStore';
+import { useBookingSync } from '../hooks/useBookingSync';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { 
@@ -29,9 +30,8 @@ export default function BookingsPage() {
   const addToast = useNotificationStore((state) => state.addToast);
 
   const [activeTab, setActiveTab] = useState<'received' | 'sent'>('sent');
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [profilesMap, setProfilesMap] = useState<Record<string, any>>({});
-  const [loading, setLoading] = useState(true);
+  
+  const { bookings, profilesMap, loading, refresh } = useBookingSync();
 
   // Default tab based on role
   useEffect(() => {
@@ -42,119 +42,9 @@ export default function BookingsPage() {
     }
   }, [profile]);
 
-  // Load bookings from localStorage & sync from database notifications
-  const loadBookings = async () => {
-    if (!user) return;
-    setLoading(true);
-
-    try {
-      // 1. Get raw local bookings
-      const allBookings = JSON.parse(localStorage.getItem('pasiones_vip_bookings') || '[]');
-
-      // 2. Query system notifications to fetch any pending or missing bookings not yet in localStorage
-      const { data: notifications } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('type', 'system')
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      const syncedBookings = [...allBookings];
-      let hasChanges = false;
-
-      if (notifications && notifications.length > 0) {
-        for (const notif of notifications) {
-          try {
-            if (notif.title.startsWith('[BOOKING_REQUEST]')) {
-              const bookingData = JSON.parse(notif.content);
-              const exists = syncedBookings.some((b: any) => b.id === bookingData.id);
-              if (!exists) {
-                syncedBookings.push(bookingData);
-                hasChanges = true;
-              }
-            } else if (notif.title.startsWith('[BOOKING_ACCEPT]') || notif.title.startsWith('[BOOKING_REJECT]')) {
-              const statusData = JSON.parse(notif.content);
-              const localIndex = syncedBookings.findIndex((b: any) => b.id === statusData.id);
-              if (localIndex !== -1 && syncedBookings[localIndex].status !== statusData.status) {
-                syncedBookings[localIndex].status = statusData.status;
-                hasChanges = true;
-              }
-            }
-          } catch (e) {
-            console.error('Error parsing notification booking content:', e);
-          }
-        }
-      }
-
-      if (hasChanges) {
-        localStorage.setItem('pasiones_vip_bookings', JSON.stringify(syncedBookings));
-      }
-
-      setBookings(syncedBookings);
-
-      // 3. Fetch user profiles of all participants to display full details (city, category, avatar, etc.)
-      const participantIds = Array.from(
-        new Set(
-          syncedBookings.flatMap((b: any) => [b.profileId, b.clientId])
-        )
-      ).filter(Boolean);
-
-      if (participantIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('*')
-          .in('id', participantIds);
-
-        if (!profilesError && profilesData) {
-          const map: Record<string, any> = {};
-          profilesData.forEach((p) => {
-            map[p.id] = p;
-          });
-          setProfilesMap(map);
-        }
-      }
-    } catch (err) {
-      console.error('Error loading bookings or profiles:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadBookings();
-
-    // Listen to database real-time notifications to update instantly
-    if (!user) return;
-    const channelId = `bookings_page_sync:${user.id}:${Math.random().toString(36).substring(2, 9)}`;
-    const channel = supabase
-      .channel(channelId)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => {
-          loadBookings();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
   // Actions
   const handleAccept = async (booking: any) => {
     try {
-      const allBookings = JSON.parse(localStorage.getItem('pasiones_vip_bookings') || '[]');
-      const updated = allBookings.map((b: any) => b.id === booking.id ? { ...b, status: 'accepted' } : b);
-      localStorage.setItem('pasiones_vip_bookings', JSON.stringify(updated));
-
       // Send real-time notification to client
       await notificationService.createNotification({
         user_id: booking.clientId,
@@ -170,7 +60,7 @@ export default function BookingsPage() {
         message: 'Cita Aceptada 🎉',
         description: 'Has aceptado la reservación. Se notificará al cliente.'
       });
-      loadBookings();
+      refresh();
     } catch (err) {
       console.error('Error accepting booking:', err);
       addToast({ type: 'error', message: 'Error', description: 'No se pudo aceptar la cita.' });
@@ -179,10 +69,6 @@ export default function BookingsPage() {
 
   const handleReject = async (booking: any) => {
     try {
-      const allBookings = JSON.parse(localStorage.getItem('pasiones_vip_bookings') || '[]');
-      const updated = allBookings.map((b: any) => b.id === booking.id ? { ...b, status: 'rejected' } : b);
-      localStorage.setItem('pasiones_vip_bookings', JSON.stringify(updated));
-
       // Send real-time notification to client
       await notificationService.createNotification({
         user_id: booking.clientId,
@@ -198,7 +84,7 @@ export default function BookingsPage() {
         message: 'Cita Rechazada 💔',
         description: 'Has rechazado la reservación.'
       });
-      loadBookings();
+      refresh();
     } catch (err) {
       console.error('Error rejecting booking:', err);
       addToast({ type: 'error', message: 'Error', description: 'No se pudo rechazar la cita.' });

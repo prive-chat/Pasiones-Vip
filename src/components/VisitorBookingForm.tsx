@@ -48,11 +48,9 @@ export function VisitorBookingForm({ profile, setActiveTab }: VisitorBookingForm
     }
 
     if (!profile?.id) return;
-
-    const allBookings = JSON.parse(localStorage.getItem('pasiones_vip_bookings') || '[]');
     
-    // Check for duplicates
-    if (allBookings.some((b: any) => b.profileId === profile?.id && b.clientId === currentUser?.id && b.date === bookingDay && b.status === 'pending')) {
+    // Check for duplicates in synchronized database bookings
+    if (visitorBookings.some((b: any) => b.date === bookingDay && b.status === 'pending')) {
       addToast({ type: 'info', message: 'Reserva Existente', description: 'Ya tienes una reserva pendiente para esta fecha.' });
       return;
     }
@@ -69,6 +67,7 @@ export function VisitorBookingForm({ profile, setActiveTab }: VisitorBookingForm
       created_at: Date.now()
     };
 
+    const allBookings = JSON.parse(localStorage.getItem('pasiones_vip_bookings') || '[]');
     allBookings.push(newBooking);
     localStorage.setItem('pasiones_vip_bookings', JSON.stringify(allBookings));
 
