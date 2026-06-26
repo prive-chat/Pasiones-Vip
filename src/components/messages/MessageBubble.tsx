@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useUIStore } from '../../store/uiStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { creditsManager } from '../../lib/credits';
+import { subscriptionService } from '../../services/subscriptionService';
 
 interface MessageBubbleProps {
   message: Message;
@@ -51,6 +52,17 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
 
   const [revealSelfDestruct, setRevealSelfDestruct] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [isSubscribedToSender, setIsSubscribedToSender] = useState(false);
+
+  useEffect(() => {
+    const checkSub = async () => {
+      if (currentUserId && message.sender_id) {
+        const sub = await subscriptionService.isUserSubscribed(currentUserId, message.sender_id);
+        setIsSubscribedToSender(sub);
+      }
+    };
+    checkSub();
+  }, [currentUserId, message.sender_id]);
 
   useEffect(() => {
     if (countdown === null) return;
@@ -72,7 +84,7 @@ export const MessageBubble: FC<MessageBubbleProps> = ({
     return () => clearTimeout(timer);
   }, [countdown, message.id, addToast]);
 
-  const effectiveUnlocked = isMe || isUnlocked;
+  const effectiveUnlocked = isMe || isUnlocked || isSubscribedToSender;
 
   const handleUnlock = (e: React.MouseEvent) => {
     e.stopPropagation();

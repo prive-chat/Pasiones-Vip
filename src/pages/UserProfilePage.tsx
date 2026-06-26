@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/src/lib/supabase';
 import { UserProfile, MediaItem } from '@/src/types';
@@ -24,7 +24,10 @@ import {
   ShieldCheck,
   MapPin,
   Tag,
-  Share2
+  Share2,
+  Plus,
+  Trash,
+  Settings
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
@@ -33,7 +36,9 @@ import { MediaViewer } from '@/src/components/ui/MediaViewer';
 import { mediaService } from '@/src/services/mediaService';
 import { profileService } from '@/src/services/profileService';
 import { reviewService } from '@/src/services/reviewService';
+import { subscriptionService } from '@/src/services/subscriptionService';
 import { useAuth } from '@/src/hooks/useAuth';
+import { useUIStore } from '@/src/store/uiStore';
 import { cn } from '@/src/lib/utils';
 import { useMutation, useQueryClient, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import MediaCard from '@/src/components/MediaCard';
@@ -67,6 +72,131 @@ export default function UserProfilePage() {
   const [activeTab, setActiveTab] = useState<'posts' | 'reviews' | 'agenda' | 'about'>('posts');
   const [isTipModalOpen, setIsTipModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+
+  // Subscription States & Effects
+  const [isSubConfigModalOpen, setIsSubConfigModalOpen] = useState(false);
+  const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
+  
+  const [subConfig, setSubConfig] = useState<any>(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isCheckingSub, setIsCheckingSub] = useState(true);
+
+  // Config Form States
+  const [configEnabled, setConfigEnabled] = useState(false);
+  const [configPrice, setConfigPrice] = useState(100);
+  const [configBenefits, setConfigBenefits] = useState<string[]>([]);
+  const [newBenefit, setNewBenefit] = useState('');
+
+  // Fetch subscription data
+  const fetchSubData = useCallback(async () => {
+    if (!userId) return;
+    setIsCheckingSub(true);
+    try {
+      const config = await subscriptionService.getSubscriptionConfig(userId);
+      setSubConfig(config);
+      if (config) {
+        setConfigEnabled(config.enabled);
+        setConfigPrice(config.price);
+        setConfigBenefits(config.benefits || []);
+      }
+
+      if (currentUser?.id && currentUser.id !== userId) {
+        const sub = await subscriptionService.isUserSubscribed(currentUser.id, userId);
+        setIsSubscribed(sub);
+      }
+    } catch (err) {
+      console.error('Error fetching subscription data:', err);
+    } finally {
+      setIsCheckingSub(false);
+    }
+  }, [userId, currentUser?.id]);
+
+  useEffect(() => {
+    fetchSubData();
+  }, [fetchSubData]);
+
+  const handleSaveSubConfig = async () => {
+    if (!userId) return;
+    try {
+      const success = await subscriptionService.saveSubscriptionConfig(userId, {
+        enabled: configEnabled,
+        price: Number(configPrice),
+        benefits: configBenefits
+      });
+
+      if (success) {
+        addToast({
+          type: 'success',
+          message: 'Configuración Guardada',
+          description: 'Los planes de suscripción han sido actualizados.',
+          duration: 3000
+        });
+        setIsSubConfigModalOpen(false);
+        fetchSubData();
+      }
+    } catch (err) {
+      addToast({
+        type: 'error',
+        message: 'Error',
+        description: 'No se pudo guardar la configuración.',
+        duration: 3000
+      });
+    }
+  };
+
+  const handleSubscribe = async () => {
+    if (!currentUser?.id || !userId) return;
+    try {
+      const success = await subscriptionService.subscribeToCreator(currentUser.id, userId, subConfig?.price || 150);
+      if (success) {
+        addToast({
+          type: 'success',
+          message: '¡Suscripción Exitosa!',
+          description: `Te has suscrito correctamente a este creador.`,
+          duration: 3000
+        });
+        setIsSubscribeModalOpen(false);
+        fetchSubData();
+      } else {
+        addToast({
+          type: 'error',
+          message: 'Saldo Insuficiente',
+          description: `No tienes suficientes créditos para suscribirte. Requiere ${subConfig?.price} créditos.`,
+          duration: 4000
+        });
+      }
+    } catch (err) {
+      addToast({
+        type: 'error',
+        message: 'Error',
+        description: 'Hubo un problema al procesar la suscripción.',
+        duration: 3000
+      });
+    }
+  };
+
+  const handleUnsubscribe = async () => {
+    if (!currentUser?.id || !userId) return;
+    try {
+      const success = await subscriptionService.unsubscribeFromCreator(currentUser.id, userId);
+      if (success) {
+        addToast({
+          type: 'success',
+          message: 'Suscripción Cancelada',
+          description: 'Has cancelado tu suscripción a este creador.',
+          duration: 3000
+        });
+        fetchSubData();
+      }
+    } catch (err) {
+      addToast({
+        type: 'error',
+        message: 'Error',
+        description: 'No se pudo cancelar la suscripción.',
+        duration: 3000
+      });
+    }
+  };
   
   // Review state
   const [rating, setRating] = useState(5);
@@ -315,13 +445,25 @@ export default function UserProfilePage() {
           </div>
 
           {/* Actions */}
-          <div className="mt-6 flex space-x-3 md:mt-0 md:pb-4">
+          <div className="mt-6 flex flex-wrap gap-3 md:mt-0 md:pb-4">
             {isMe ? (
-              <Link to="/settings">
-                <Button variant="glass" className="h-11 px-6">
-                  Editar Perfil
-                </Button>
-              </Link>
+              <div className="flex gap-2">
+                <Link to="/settings">
+                  <Button variant="glass" className="h-11 px-6">
+                    Editar Perfil
+                  </Button>
+                </Link>
+                {profile.is_verified && (
+                  <Button 
+                    variant="glass" 
+                    className="h-11 px-4 bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white"
+                    onClick={() => setIsSubConfigModalOpen(true)}
+                  >
+                    <Settings size={18} className="mr-1.5" />
+                    Suscripción VIP
+                  </Button>
+                )}
+              </div>
             ) : (
               <>
                 {followStatus === 'accepted' ? (
@@ -340,6 +482,30 @@ export default function UserProfilePage() {
                     Seguir
                   </Button>
                 )}
+                
+                {/* Subscription Action Button (for visitors viewing a verified user) */}
+                {profile.is_verified && subConfig?.enabled && (
+                  isSubscribed ? (
+                    <Button 
+                      variant="glass" 
+                      onClick={handleUnsubscribe} 
+                      className="h-11 px-4 bg-emerald-500/10 text-emerald-400 hover:bg-red-500/10 hover:text-red-400 border border-emerald-500/20"
+                    >
+                      <Star size={16} className="mr-1.5 fill-emerald-400 text-emerald-400" />
+                      Suscrito
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="glass" 
+                      onClick={() => setIsSubscribeModalOpen(true)} 
+                      className="h-11 px-4 bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-black border border-amber-500/20 animate-pulse"
+                    >
+                      <Star size={16} className="mr-1.5" />
+                      Suscribirse ({subConfig.price} cr)
+                    </Button>
+                  )
+                )}
+
                 <Link to={`/messages?to=${profile.id}`}>
                   <Button variant="glass" className="h-11 px-4">
                     <MessageSquare size={20} />
@@ -843,6 +1009,169 @@ export default function UserProfilePage() {
                   </Button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Subscription Configuration Modal */}
+        {isSubConfigModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-lg overflow-hidden rounded-[2.5rem] p-8 glass-card border border-amber-500/20 shadow-[0_0_50px_rgba(245,158,11,0.1)]"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-500 mb-6">
+                <Settings size={24} />
+              </div>
+              <h3 className="text-2xl font-black text-white italic uppercase mb-2">Configurar Plan de Suscripción</h3>
+              <p className="text-white/40 text-sm mb-6 uppercase tracking-widest font-black">Define los beneficios y el costo mensual de tu club VIP</p>
+
+              <div className="space-y-6">
+                {/* Enabled Toggle */}
+                <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10">
+                  <div>
+                    <h4 className="text-sm font-black text-white uppercase tracking-tight">Activar Suscripciones</h4>
+                    <p className="text-[10px] text-white/40 uppercase mt-0.5 tracking-wider font-bold">Permitir que los usuarios se suscriban</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={configEnabled}
+                    onChange={(e) => setConfigEnabled(e.target.checked)}
+                    className="w-5 h-5 rounded text-amber-500 bg-zinc-800 border-zinc-700/50 focus:ring-amber-500 text-amber-400 focus:outline-none"
+                  />
+                </div>
+
+                {/* Price and Period settings */}
+                {configEnabled && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-white/40 uppercase tracking-widest italic ml-1">Tarifa Mensual (Créditos)</label>
+                      <input
+                        type="number"
+                        min="50"
+                        max="10000"
+                        value={configPrice}
+                        onChange={(e) => setConfigPrice(Number(e.target.value))}
+                        className="w-full rounded-2xl bg-white/5 border border-white/10 p-3 text-white font-mono text-center focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all text-sm font-bold"
+                      />
+                    </div>
+
+                    {/* Benefits Section */}
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black text-white/40 uppercase tracking-widest italic ml-1">Beneficios del Club VIP</label>
+                      
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Ej: Contenido explícito sin censura..."
+                          value={newBenefit}
+                          onChange={(e) => setNewBenefit(e.target.value)}
+                          className="flex-1 rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-xs text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all italic"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (newBenefit.trim()) {
+                              setConfigBenefits([...configBenefits, newBenefit.trim()]);
+                              setNewBenefit('');
+                            }
+                          }}
+                          className="px-3 rounded-xl bg-amber-500 text-black text-xs font-black uppercase hover:bg-amber-600 active:scale-95 transition-all flex items-center justify-center"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+
+                      <div className="space-y-2 max-h-[120px] overflow-y-auto scrollbar-none">
+                        {configBenefits.map((benefit, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs">
+                            <span className="text-white/80 font-medium italic">{benefit}</span>
+                            <button
+                              type="button"
+                              onClick={() => setConfigBenefits(configBenefits.filter((_, i) => i !== idx))}
+                              className="text-red-400 hover:text-red-500 transition-colors"
+                            >
+                              <Trash size={14} />
+                            </button>
+                          </div>
+                        ))}
+                        {configBenefits.length === 0 && (
+                          <p className="text-[10px] text-white/20 uppercase font-black tracking-widest text-center py-2 italic">
+                            No se han agregado beneficios aún
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                <div className="flex flex-col space-y-3 pt-4">
+                  <Button 
+                    className="w-full h-12 text-lg italic bg-amber-500 hover:bg-amber-600 text-black font-black uppercase"
+                    onClick={handleSaveSubConfig}
+                  >
+                    Guardar Configuración
+                  </Button>
+                  <Button variant="ghost" className="text-white/40 hover:text-white" onClick={() => setIsSubConfigModalOpen(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Subscribe Modal (for visitors to subscribe) */}
+        {isSubscribeModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-md overflow-hidden rounded-[2.5rem] p-8 glass-card border border-amber-500/20 shadow-[0_0_50px_rgba(245,158,11,0.15)]"
+            >
+              <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-500/20 text-amber-500 mb-6 mx-auto">
+                <Star size={32} className="fill-amber-500 text-amber-400" />
+              </div>
+              <h3 className="text-2xl font-black text-white text-center italic uppercase mb-2">Suscripción VIP</h3>
+              <p className="text-white/40 text-center text-sm mb-6 uppercase tracking-widest font-black">Apoya a {profile.full_name?.split(' ')[0]} y obtén beneficios exclusivos</p>
+
+              <div className="p-5 rounded-2xl bg-amber-500/5 border border-amber-500/20 mb-6 text-center">
+                <span className="text-xs font-black text-amber-400 uppercase tracking-widest block mb-1">Costo de Membresía</span>
+                <span className="text-3xl font-black text-white font-mono">{subConfig?.price} <span className="text-lg text-amber-400">cr/mes</span></span>
+              </div>
+
+              {subConfig?.benefits && subConfig.benefits.length > 0 && (
+                <div className="space-y-3 mb-8">
+                  <span className="text-[10px] font-black text-white/40 uppercase tracking-widest block mb-1 ml-1">Beneficios incluidos:</span>
+                  <div className="space-y-2 max-h-[150px] overflow-y-auto scrollbar-none">
+                    {subConfig.benefits.map((benefit: string, idx: number) => (
+                      <div key={idx} className="flex items-start gap-2 text-xs">
+                        <span className="text-amber-500 mt-0.5 font-bold">✓</span>
+                        <span className="text-white/70 italic font-medium">{benefit}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col space-y-3">
+                <Button 
+                  className="w-full h-12 text-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:opacity-90 text-black font-black uppercase tracking-wider italic animate-pulse"
+                  onClick={handleSubscribe}
+                >
+                  Confirmar Suscripción
+                </Button>
+                <Button variant="ghost" className="text-white/20 hover:text-white" onClick={() => setIsSubscribeModalOpen(false)}>
+                  Volver
+                </Button>
+              </div>
             </motion.div>
           </div>
         )}

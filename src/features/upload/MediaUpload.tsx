@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { mediaService } from '@/src/services/mediaService';
 import { Button } from '@/src/components/ui/Button';
-import { Upload, X, AlertCircle, Loader2, Image as ImageIcon, Video as VideoIcon, Lock, EyeOff, ShieldCheck } from 'lucide-react';
+import { Upload, X, AlertCircle, Loader2, Image as ImageIcon, Video as VideoIcon, Lock, EyeOff, ShieldCheck, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/src/hooks/useAuth';
 import { useNotificationStore } from '@/src/store/notificationStore';
@@ -36,6 +36,7 @@ export default function MediaUpload({ onUploadComplete }: MediaUploadProps) {
   const [isPremium, setIsPremium] = useState(false);
   const [premiumPrice, setPremiumPrice] = useState(50);
   const [isSelfDestruct, setIsSelfDestruct] = useState(false);
+  const [isSubscriberOnly, setIsSubscriberOnly] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -123,6 +124,7 @@ export default function MediaUpload({ onUploadComplete }: MediaUploadProps) {
           is_premium: isPremium,
           price: isPremium ? Number(premiumPrice) : 0,
           is_self_destruct: isSelfDestruct,
+          is_subscriber_only: isSubscriberOnly,
         };
         localStorage.setItem('pasiones_vip_posts_premium_metadata', JSON.stringify(premiumMetadata));
       }
@@ -300,7 +302,12 @@ export default function MediaUpload({ onUploadComplete }: MediaUploadProps) {
                   <input 
                     type="checkbox" 
                     checked={isPremium}
-                    onChange={(e) => setIsPremium(e.target.checked)}
+                    onChange={(e) => {
+                      setIsPremium(e.target.checked);
+                      if (e.target.checked) {
+                        setIsSubscriberOnly(false); // mutually exclusive
+                      }
+                    }}
                     className="w-4 h-4 rounded text-amber-500 bg-zinc-800 border-zinc-700/50 focus:ring-amber-500 text-amber-400 focus:outline-none"
                   />
                 </div>
@@ -356,6 +363,44 @@ export default function MediaUpload({ onUploadComplete }: MediaUploadProps) {
                   >
                     <ShieldCheck size={11} /> Screen Shield Activo contra capturas
                   </motion.div>
+                )}
+              </div>
+
+              {/* Subscriber-Only Toggle (Available only for verified users) */}
+              <div className={cn(
+                "flex flex-col justify-between p-4 rounded-2xl border transition-all duration-300",
+                isSubscriberOnly ? "bg-amber-500/[0.03] border-amber-500/20" : "bg-white/5 border-transparent",
+                !profile?.is_verified && "opacity-50"
+              )}>
+                <div className="flex items-start justify-between">
+                  <div className="flex gap-3">
+                    <div className={cn("p-2 rounded-xl text-xs", isSubscriberOnly ? "bg-amber-500/20 text-amber-400" : "bg-white/5 text-white/40")}>
+                      <Star size={16} className={isSubscriberOnly ? "fill-amber-400" : ""} />
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-black text-white uppercase tracking-tight">Solo Suscriptores</h5>
+                      <p className="text-[10px] text-white/40 font-bold uppercase mt-0.5 tracking-wider">
+                        {!profile?.is_verified ? "Perfil Verificado Necesario" : "Beneficio para tus suscriptores"}
+                      </p>
+                    </div>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={isSubscriberOnly}
+                    disabled={!profile?.is_verified}
+                    onChange={(e) => {
+                      setIsSubscriberOnly(e.target.checked);
+                      if (e.target.checked) {
+                        setIsPremium(false); // mutually exclusive
+                      }
+                    }}
+                    className="w-4 h-4 rounded text-amber-500 bg-zinc-800 border-zinc-700/50 focus:ring-amber-500 text-amber-400 focus:outline-none disabled:opacity-30"
+                  />
+                </div>
+                {!profile?.is_verified && (
+                  <div className="mt-4 pt-4 border-t border-white/5 text-[9px] text-white/30 uppercase font-black tracking-widest leading-relaxed">
+                    Disponible únicamente para creadores verificados
+                  </div>
                 )}
               </div>
             </div>

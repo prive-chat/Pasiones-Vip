@@ -2,10 +2,11 @@ import { memo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
-import { Heart, MessageSquare, Trash2, Maximize2, CheckCircle2, Share2, Flame, Laugh, Heart as HeartIcon, Copy, Facebook, Twitter, Send, Lock, EyeOff, ShieldCheck, Eye, Coins } from 'lucide-react';
+import { Heart, MessageSquare, Trash2, Maximize2, CheckCircle2, Share2, Flame, Laugh, Heart as HeartIcon, Copy, Facebook, Twitter, Send, Lock, EyeOff, ShieldCheck, Eye, Coins, Star } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { mediaService } from '../services/mediaService';
 import { useAuth } from '../hooks/useAuth';
+import { subscriptionService } from '../services/subscriptionService';
 import { Card, CardContent } from './ui/Card';
 import { cn } from '../lib/utils';
 import { MediaItem } from '../types';
@@ -46,14 +47,40 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
   const isPremiumPost = premiumMetadata?.is_premium || false;
   const premiumPrice = premiumMetadata?.price || 0;
   const isSelfDestructPost = premiumMetadata?.is_self_destruct || false;
+  const isSubscriberOnlyPost = premiumMetadata?.is_subscriber_only || false;
 
-  // Reactively track unlock and watched status
-  const [isUnlocked, setIsUnlocked] = useState(() => {
-    if (item.user_id === user?.id) return true;
-    if (!isPremiumPost) return true;
+  const [isSubscribedToCreator, setIsSubscribedToCreator] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+
+  useEffect(() => {
+    const checkSub = async () => {
+      if (user?.id) {
+        const sub = await subscriptionService.isUserSubscribed(user.id, item.user_id);
+        setIsSubscribedToCreator(sub);
+      }
+    };
+    checkSub();
+  }, [user?.id, item.user_id]);
+
+  useEffect(() => {
+    if (item.user_id === user?.id) {
+      setIsUnlocked(true);
+      return;
+    }
+
+    if (isSubscriberOnlyPost) {
+      setIsUnlocked(isSubscribedToCreator);
+      return;
+    }
+
+    if (!isPremiumPost) {
+      setIsUnlocked(true);
+      return;
+    }
+
     const unlockedList = JSON.parse(localStorage.getItem('pasiones_vip_unlocked_posts') || '[]');
-    return unlockedList.includes(item.id);
-  });
+    setIsUnlocked(unlockedList.includes(item.id));
+  }, [user?.id, item.user_id, isSubscriberOnlyPost, isSubscribedToCreator, isPremiumPost, item.id]);
 
   const [isDestroyed, setIsDestroyed] = useState(() => {
     if (item.user_id === user?.id) return false;
@@ -297,23 +324,42 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
         >
           {/* Blurred Lock Screen */}
           {!isUnlocked && !isDestroyed && (
-            <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/95 to-black/90 z-20 flex flex-col items-center justify-center p-6 text-center">
-              <div className="bg-amber-500/10 p-4 rounded-3xl border border-amber-500/20 mb-3 text-amber-400">
-                <Lock size={36} className="animate-pulse" />
+            isSubscriberOnlyPost ? (
+              <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/95 to-black/90 z-20 flex flex-col items-center justify-center p-6 text-center">
+                <div className="bg-amber-500/10 p-4 rounded-3xl border border-amber-500/20 mb-3 text-amber-500">
+                  <Star size={36} className="animate-bounce fill-amber-500 text-amber-400" />
+                </div>
+                <h4 className="text-sm font-black uppercase tracking-widest text-amber-500">Suscripción VIP</h4>
+                <p className="text-xs text-white/50 mt-1.5 font-medium max-w-[220px]">
+                  Publicación exclusiva para suscriptores. Apoya al creador para ver este contenido.
+                </p>
+                
+                <Link
+                  to={`/profile/${item.user_id}`}
+                  className="mt-5 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-black text-xs font-black uppercase tracking-wider py-3 px-6 rounded-2xl shadow-xl transition-all hover:scale-[1.03] active:scale-95"
+                >
+                  Suscribirse desde el perfil
+                </Link>
               </div>
-              <h4 className="text-sm font-black uppercase tracking-widest text-amber-500">Muro Premium VIP</h4>
-              <p className="text-xs text-white/50 mt-1.5 font-medium max-w-[220px]">
-                Este creador configuró esta publicación como exclusiva para seguidores premium.
-              </p>
-              
-              <button
-                onClick={handleUnlockPremium}
-                className="mt-5 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-black text-xs font-black uppercase tracking-wider py-3 px-6 rounded-2xl shadow-xl transition-all hover:scale-[1.03] active:scale-95 animate-pulse"
-              >
-                <Coins size={14} />
-                Desbloquear por {premiumPrice} Créditos
-              </button>
-            </div>
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/95 to-black/90 z-20 flex flex-col items-center justify-center p-6 text-center">
+                <div className="bg-amber-500/10 p-4 rounded-3xl border border-amber-500/20 mb-3 text-amber-400">
+                  <Lock size={36} className="animate-pulse" />
+                </div>
+                <h4 className="text-sm font-black uppercase tracking-widest text-amber-500">Muro Premium VIP</h4>
+                <p className="text-xs text-white/50 mt-1.5 font-medium max-w-[220px]">
+                  Este creador configuró esta publicación como exclusiva para seguidores premium.
+                </p>
+                
+                <button
+                  onClick={handleUnlockPremium}
+                  className="mt-5 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-black text-xs font-black uppercase tracking-wider py-3 px-6 rounded-2xl shadow-xl transition-all hover:scale-[1.03] active:scale-95 animate-pulse"
+                >
+                  <Coins size={14} />
+                  Desbloquear por {premiumPrice} Créditos
+                </button>
+              </div>
+            )
           )}
 
           {/* Destroyed Screen */}

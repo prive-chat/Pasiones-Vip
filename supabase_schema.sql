@@ -113,6 +113,25 @@ CREATE TABLE IF NOT EXISTS public.follows (
   UNIQUE(follower_id, following_id)
 );
 
+-- G2. CONFIGURACIONES DE SUSCRIPCIÓN (SUBSCRIPTION_CONFIGS)
+CREATE TABLE IF NOT EXISTS public.subscription_configs (
+  creator_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE PRIMARY KEY,
+  enabled BOOLEAN DEFAULT FALSE,
+  price INTEGER DEFAULT 150,
+  benefits JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- G3. SUSCRIPCIONES VIP (SUBSCRIPTIONS)
+CREATE TABLE IF NOT EXISTS public.subscriptions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  subscriber_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  creator_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  UNIQUE(subscriber_id, creator_id)
+);
+
 -- H. ESTADO DE CHATS (USER_CHATS)
 CREATE TABLE IF NOT EXISTS public.user_chats (
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
@@ -231,6 +250,8 @@ ALTER TABLE public.user_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.global_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.stories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subscription_configs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION public.is_super_admin()
 RETURNS BOOLEAN AS $$
@@ -311,6 +332,20 @@ CREATE POLICY "Follows visibles por involucrados" ON public.follows FOR SELECT U
 
 DROP POLICY IF EXISTS "Usuarios gestionan sus follows" ON public.follows;
 CREATE POLICY "Usuarios gestionan sus follows" ON public.follows FOR ALL USING (auth.uid() = follower_id OR auth.uid() = following_id);
+
+-- SUBSCRIPTION CONFIGS
+DROP POLICY IF EXISTS "Configuraciones de suscripcion publicas" ON public.subscription_configs;
+CREATE POLICY "Configuraciones de suscripcion publicas" ON public.subscription_configs FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Creadores gestionan sus configuraciones" ON public.subscription_configs;
+CREATE POLICY "Creadores gestionan sus configuraciones" ON public.subscription_configs FOR ALL USING (auth.uid() = creator_id);
+
+-- SUBSCRIPTIONS
+DROP POLICY IF EXISTS "Suscripciones visibles por involucrados" ON public.subscriptions;
+CREATE POLICY "Suscripciones visibles por involucrados" ON public.subscriptions FOR SELECT USING (auth.uid() = subscriber_id OR auth.uid() = creator_id);
+
+DROP POLICY IF EXISTS "Usuarios gestionan sus suscripciones" ON public.subscriptions;
+CREATE POLICY "Usuarios gestionan sus suscripciones" ON public.subscriptions FOR ALL USING (auth.uid() = subscriber_id);
 
 -- USER CHATS
 DROP POLICY IF EXISTS "Usuarios gestionan sus chats" ON public.user_chats;
