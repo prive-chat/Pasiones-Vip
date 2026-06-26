@@ -433,8 +433,12 @@ CREATE POLICY "Acceso público a medios" ON storage.objects FOR SELECT USING (bu
 DROP POLICY IF EXISTS "Usuarios suben a media" ON storage.objects;
 CREATE POLICY "Usuarios suben a media" ON storage.objects FOR INSERT WITH CHECK (
   bucket_id = 'media' AND 
-  auth.role() = 'authenticated' AND
-  (SELECT is_verified FROM public.profiles WHERE id = auth.uid()) = TRUE
+  auth.role() = 'authenticated' AND (
+    (SELECT is_verified FROM public.profiles WHERE id = auth.uid()) = TRUE OR
+    name LIKE 'avatars/%' OR
+    name LIKE 'covers/%' OR
+    name LIKE 'verifications/%'
+  )
 );
 
 DROP POLICY IF EXISTS "Usuarios eliminan sus objetos" ON storage.objects;
