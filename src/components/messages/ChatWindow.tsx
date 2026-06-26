@@ -13,6 +13,8 @@ import { Virtuoso } from 'react-virtuoso';
 import { isSameDay, format, isToday, isYesterday } from 'date-fns';
 import { es } from 'date-fns/locale';
 import AgoraRTC from 'agora-rtc-sdk-ng';
+import { useNotificationStore } from '@/src/store/notificationStore';
+import { subscriptionService } from '@/src/services/subscriptionService';
 
 try {
   AgoraRTC.setLogLevel(3); // Warning and errors only to keep console pristine
@@ -94,6 +96,34 @@ export const ChatWindow: FC<ChatWindowProps> = ({
   const optionsRef = useRef<HTMLDivElement>(null);
   const virtuosoRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const addToast = useNotificationStore((state) => state.addToast);
+  const [isSubscribedToTarget, setIsSubscribedToTarget] = useState(false);
+  const [checkingSubscription, setCheckingSubscription] = useState(true);
+
+  useEffect(() => {
+    const checkSub = async () => {
+      if (currentUser?.id && targetUser?.id) {
+        setCheckingSubscription(true);
+        try {
+          const sub = await subscriptionService.isUserSubscribed(currentUser.id, targetUser.id);
+          setIsSubscribedToTarget(sub);
+        } catch (err) {
+          console.error("Error checking subscription status:", err);
+        } finally {
+          setCheckingSubscription(false);
+        }
+      } else {
+        setIsSubscribedToTarget(false);
+        setCheckingSubscription(false);
+      }
+    };
+    checkSub();
+  }, [currentUser?.id, targetUser?.id]);
+
+  const isTargetVerified = targetUser?.is_verified === true;
+  const isMe = currentUser?.id === targetUser?.id;
+  const canSendMediaAndCall = isMe || (isTargetVerified && isSubscribedToTarget);
 
   // P2P WebRTC Secure Call Simulator states (Item 5) upgraded to Real Agora RTC Integration
   const [activeCall, setActiveCall] = useState<'video' | 'audio' | null>(null);
@@ -407,14 +437,54 @@ export const ChatWindow: FC<ChatWindowProps> = ({
 
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => startAgoraCall('audio')}
+              onClick={() => {
+                if (!isTargetVerified && !isMe) {
+                  addToast({
+                    type: 'error',
+                    message: 'Llamada Bloqueada',
+                    description: 'Solo los usuarios verificados pueden recibir llamadas de voz.',
+                    duration: 4000
+                  });
+                  return;
+                }
+                if (!isSubscribedToTarget && !isMe) {
+                  addToast({
+                    type: 'warning',
+                    message: 'Suscripción Requerida',
+                    description: 'Debes suscribirte a este creador para realizar llamadas de voz.',
+                    duration: 5000
+                  });
+                  return;
+                }
+                startAgoraCall('audio');
+              }}
               className="p-2 rounded-xl bg-white/5 text-primary-400 hover:text-white hover:bg-primary-600/20 border border-white/5 transition-all mr-1"
               title="Iniciar Audiollamada Encriptada"
             >
               <Phone size={16} />
             </button>
             <button
-              onClick={() => startAgoraCall('video')}
+              onClick={() => {
+                if (!isTargetVerified && !isMe) {
+                  addToast({
+                    type: 'error',
+                    message: 'Videollamada Bloqueada',
+                    description: 'Solo los usuarios verificados pueden recibir videollamadas.',
+                    duration: 4000
+                  });
+                  return;
+                }
+                if (!isSubscribedToTarget && !isMe) {
+                  addToast({
+                    type: 'warning',
+                    message: 'Suscripción Requerida',
+                    description: 'Debes suscribirte a este creador para realizar videollamadas.',
+                    duration: 5000
+                  });
+                  return;
+                }
+                startAgoraCall('video');
+              }}
               className="p-2 rounded-xl bg-gradient-to-r from-red-600 to-primary-600 text-white hover:opacity-90 shadow-lg border border-red-500/10 transition-all mr-1 flex items-center justify-center gap-1 px-3 text-[10px] font-black uppercase tracking-widest italic"
               title="Iniciar Videollamada P2P Segura"
             >
@@ -710,8 +780,14 @@ export const ChatWindow: FC<ChatWindowProps> = ({
             )}
             
             {!filePreview && (
-              <p className="text-[8px] font-black text-white/30 uppercase tracking-widest text-center mb-3">
-                📷 Adjunta foto o video para activar el Muro Premium VIP o la Auto-Destrucción
+              <p className="text-[8px] font-black uppercase tracking-widest text-center mb-3 transition-colors duration-300">
+                {!isTargetVerified && !isMe ? (
+                  <span className="text-red-500/80">⚠️ Solo los usuarios verificados pueden recibir multimedia y llamadas</span>
+                ) : !isSubscribedToTarget && !isMe ? (
+                  <span className="text-amber-500/80">⭐ Debes suscribirte a este creador para enviar multimedia y llamarle</span>
+                ) : (
+                  <span className="text-white/30">📷 Adjunta foto o video para activar el Muro Premium VIP o la Auto-Destrucción</span>
+                )}
               </p>
             )}
           </>
@@ -724,7 +800,27 @@ export const ChatWindow: FC<ChatWindowProps> = ({
                 <div className="flex items-center space-x-2">
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => {
+                      if (!isTargetVerified && !isMe) {
+                        addToast({
+                          type: 'error',
+                          message: 'Acceso Restringido',
+                          description: 'Solo los usuarios verificados pueden recibir archivos multimedia.',
+                          duration: 4000
+                        });
+                        return;
+                      }
+                      if (!isSubscribedToTarget && !isMe) {
+                        addToast({
+                          type: 'warning',
+                          message: 'Suscripción Requerida',
+                          description: 'Debes suscribirte a este creador para poder enviarle archivos multimedia.',
+                          duration: 5000
+                        });
+                        return;
+                      }
+                      fileInputRef.current?.click();
+                    }}
                     disabled={isSending}
                     className="p-2 rounded-lg bg-white/5 text-white/60 hover:text-primary-400 hover:bg-primary-600/10 transition-all disabled:opacity-50"
                   >
@@ -740,7 +836,27 @@ export const ChatWindow: FC<ChatWindowProps> = ({
                   />
                   <button
                     type="button"
-                    onClick={() => setIsRecording(true)}
+                    onClick={() => {
+                      if (!isTargetVerified && !isMe) {
+                        addToast({
+                          type: 'error',
+                          message: 'Acceso Restringido',
+                          description: 'Solo los usuarios verificados pueden recibir mensajes de voz.',
+                          duration: 4000
+                        });
+                        return;
+                      }
+                      if (!isSubscribedToTarget && !isMe) {
+                        addToast({
+                          type: 'warning',
+                          message: 'Suscripción Requerida',
+                          description: 'Debes suscribirte a este creador para enviar mensajes de voz.',
+                          duration: 5000
+                        });
+                        return;
+                      }
+                      setIsRecording(true);
+                    }}
                     disabled={isSending}
                     className="p-2 rounded-lg bg-white/5 text-white/60 hover:text-primary-400 hover:bg-primary-600/10 transition-all disabled:opacity-50"
                   >
