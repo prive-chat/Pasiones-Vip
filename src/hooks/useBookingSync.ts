@@ -42,7 +42,11 @@ export function useBookingSync(profileId?: string, isMe?: boolean) {
                   profileId: bookingData.profileId || notif.user_id,
                 };
               }
-            } else if (notif.title.startsWith('[BOOKING_ACCEPT]') || notif.title.startsWith('[BOOKING_REJECT]')) {
+            } else if (
+              notif.title.startsWith('[BOOKING_ACCEPT]') || 
+              notif.title.startsWith('[BOOKING_REJECT]') || 
+              notif.title.startsWith('[BOOKING_CANCEL]')
+            ) {
               const statusData = JSON.parse(notif.content);
               if (statusData && statusData.id && bookingsMap[statusData.id]) {
                 bookingsMap[statusData.id].status = statusData.status;
@@ -138,15 +142,22 @@ export function useBookingSync(profileId?: string, isMe?: boolean) {
                     message: 'Nueva Solicitud de Cita 📅',
                     description: `${bookingData.clientName || 'Un usuario'} ha solicitado una cita.`
                   });
-                } else if ((newNotif.title.startsWith('[BOOKING_ACCEPT]') || newNotif.title.startsWith('[BOOKING_REJECT]')) && newNotif.user_id === currentUser.id) {
+                } else if ((newNotif.title.startsWith('[BOOKING_ACCEPT]') || newNotif.title.startsWith('[BOOKING_REJECT]') || newNotif.title.startsWith('[BOOKING_CANCEL]')) && newNotif.user_id === currentUser.id) {
                   const statusData = JSON.parse(newNotif.content);
                   const isAccepted = statusData.status === 'accepted';
+                  const isCancelled = statusData.status === 'cancelled';
                   addToast({
                     type: isAccepted ? 'success' : 'info',
-                    message: isAccepted ? 'Cita Aceptada 🎉' : 'Cita Rechazada 💔',
+                    message: isAccepted 
+                      ? 'Cita Aceptada 🎉' 
+                      : isCancelled 
+                        ? 'Cita Cancelada ❌' 
+                        : 'Cita Rechazada 💔',
                     description: isAccepted 
                       ? 'Tu solicitud de cita discreta ha sido aprobada.' 
-                      : 'Tu solicitud de cita discreta ha sido rechazada.'
+                      : isCancelled 
+                        ? 'Una cita de tu agenda ha sido cancelada.'
+                        : 'Tu solicitud de cita discreta ha sido rechazada.'
                   });
                 }
               } catch (e) {
