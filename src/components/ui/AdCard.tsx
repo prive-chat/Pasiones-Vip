@@ -425,7 +425,7 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[99999] bg-black/98 backdrop-blur-3xl flex flex-col items-center justify-center p-4 lg:p-12 overflow-y-auto"
+            className="fixed inset-0 z-[99999] bg-black/98 backdrop-blur-3xl flex flex-col items-center p-4 lg:p-12 overflow-y-auto"
             onClick={() => setIsFullscreen(false)}
           >
             {/* Close Button */}
@@ -463,7 +463,7 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
                       src={ad.image_url} 
                       alt={ad.title}
                       className="w-full h-auto max-h-[75vh] object-contain shadow-2xl"
-                      containerClassName="w-full h-auto"
+                      containerClassName="w-full h-auto max-h-[75vh]"
                       transform={IMAGE_SIZES.FEED_POST}
                     />
                   )

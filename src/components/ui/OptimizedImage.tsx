@@ -30,6 +30,11 @@ export function OptimizedImage({
     return getOptimizedImageUrl(src, transform);
   }, [src, transform]);
 
+  const hasHeightOrAspect = useMemo(() => {
+    if (!className) return false;
+    return className.split(' ').some(c => c.startsWith('h-') || c.startsWith('max-h-') || c.startsWith('aspect-'));
+  }, [className]);
+
   return (
     <div className={cn("relative overflow-hidden bg-zinc-900/50", containerClassName)}>
       <AnimatePresence>
@@ -53,7 +58,7 @@ export function OptimizedImage({
         <motion.img
           src={optimizedSrc || ''}
           alt={alt}
-          className={cn("w-full h-full", className)}
+          className={cn("w-full", !hasHeightOrAspect && "h-full", className)}
           onLoad={() => setIsLoaded(true)}
           onError={() => setHasError(true)}
           referrerPolicy="no-referrer"
