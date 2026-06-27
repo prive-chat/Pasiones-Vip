@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { profileService } from '@/src/services/profileService';
 import { Card } from '@/src/components/ui/Card';
@@ -13,6 +13,8 @@ import { Button } from '@/src/components/ui/Button';
 import { getSimulatedCoords, calculateDistance } from '@/src/utils/geolocation';
 import { WORLD_COUNTRIES } from '@/src/utils/worldData';
 import { parseProfileBio } from '@/src/utils/profileMetadata';
+import { useDebounce } from '@/src/hooks/useDebounce';
+import { IMAGE_SIZES } from '@/src/lib/images';
 
 // Deterministic hashing helper to assign specs to profiles so the filters feel lifelike
 function getDeterministicSpecs(id: string) {
@@ -74,6 +76,10 @@ export default function UserDirectory() {
   const [sweepAngle, setSweepAngle] = useState(0);
   const [radarHoveredUser, setRadarHoveredUser] = useState<any | null>(null);
 
+  // Debounced values for performance/API optimization
+  const debouncedSearch = useDebounce(search, 400);
+  const debouncedCity = useDebounce(city, 400);
+
   // Rotate sweep beam
   useEffect(() => {
     if (viewMode !== 'radar') return;
@@ -84,9 +90,9 @@ export default function UserDirectory() {
   }, [viewMode]);
 
   const { data: rawUsers = [], isLoading } = useQuery({
-    queryKey: ['profiles', search, city, category],
-    queryFn: () => profileService.searchProfiles(search, {
-      city: city.trim() === '' ? undefined : city,
+    queryKey: ['profiles', debouncedSearch, debouncedCity, category],
+    queryFn: () => profileService.searchProfiles(debouncedSearch, {
+      city: debouncedCity.trim() === '' ? undefined : debouncedCity,
       category: category.trim() === '' ? undefined : category
     }),
   });
@@ -96,60 +102,64 @@ export default function UserDirectory() {
   const baseSimRef = getSimulatedCoords('center-ref', centerBaseCity);
 
   // Transform profiles with deterministic location coordinates, distances, and high-spec metadata
-  const processedUsers = rawUsers.map((u: any) => {
-    const { metadata } = parseProfileBio(u.bio);
-    const specs = getDeterministicSpecs(u.id);
+  const processedUsers = useMemo(() => {
+    return rawUsers.map((u: any) => {
+      const { metadata } = parseProfileBio(u.bio);
+      const specs = getDeterministicSpecs(u.id);
 
-    const mergedAge = metadata.age !== undefined ? metadata.age : specs.age;
-    const mergedHair = metadata.hair || specs.hair;
-    const mergedEyes = metadata.eyes || specs.eyes;
-    const mergedService = metadata.service || specs.service;
-    const mergedCountry = metadata.country || 'espana';
-    const mergedProvince = metadata.province || '';
-    const mergedCity = metadata.city || u.city || 'Madrid';
+      const mergedAge = metadata.age !== undefined ? metadata.age : specs.age;
+      const mergedHair = metadata.hair || specs.hair;
+      const mergedEyes = metadata.eyes || specs.eyes;
+      const mergedService = metadata.service || specs.service;
+      const mergedCountry = metadata.country || 'espana';
+      const mergedProvince = metadata.province || '';
+      const mergedCity = metadata.city || u.city || 'Madrid';
 
-    const coords = getSimulatedCoords(u.id, mergedCity);
-    const distanceKm = calculateDistance(baseSimRef.lat, baseSimRef.lng, coords.lat, coords.lng);
-    
-    return {
-      ...u,
-      age: mergedAge,
-      hair: mergedHair,
-      eyes: mergedEyes,
-      service: mergedService,
-      country: mergedCountry,
-      province: mergedProvince,
-      city: mergedCity,
-      coords,
-      distanceKm
-    };
-  });
+      const coords = getSimulatedCoords(u.id, mergedCity);
+      const distanceKm = calculateDistance(baseSimRef.lat, baseSimRef.lng, coords.lat, coords.lng);
+      
+      return {
+        ...u,
+        age: mergedAge,
+        hair: mergedHair,
+        eyes: mergedEyes,
+        service: mergedService,
+        country: mergedCountry,
+        province: mergedProvince,
+        city: mergedCity,
+        coords,
+        distanceKm
+      };
+    });
+  }, [rawUsers, baseSimRef.lat, baseSimRef.lng]);
 
   // Apply all client-side physical and distance filters
-  const filteredUsers = processedUsers.filter((u: any) => {
-    // Country Filter
-    if (selectedCountry !== 'Todos' && u.country && u.country.toLowerCase() !== selectedCountry.toLowerCase()) return false;
+  const filteredUsers = useMemo(() => {
+    return processedUsers.filter((u: any) => {
+      // Country Filter
+      if (selectedCountry !== 'Todos' && u.country && u.country.toLowerCase() !== selectedCountry.toLowerCase()) return false;
 
-    // Province Filter
-    if (selectedProvince && u.province && u.province.toLowerCase() !== selectedProvince.toLowerCase()) return false;
+      // Province Filter
+      if (selectedProvince && u.province && u.province.toLowerCase() !== selectedProvince.toLowerCase()) return false;
 
-    // Distance Filter - only apply if a specific city is selected
-    if (city && u.distanceKm > maxDistance) return false;
-    
-    // Age Filter
-    if (u.age > maxAge) return false;
-    
-    // Hair Color Filter
-    if (selectedHair !== 'any' && u.hair.toLowerCase() !== selectedHair.toLowerCase()) return false;
-    
-    // Eye Color Filter
-    if (selectedEyes !== 'any' && u.eyes.toLowerCase() !== selectedEyes.toLowerCase()) return false;
-    
-    // Premium Service Filter
-    if (selectedService !== 'any' && u.service.toLowerCase() !== selectedService.toLowerCase()) return false;
-    
-    return true;
-  });
+      // Distance Filter - only apply if a specific city is selected
+      if (city && u.distanceKm > maxDistance) return false;
+      
+      // Age Filter
+      if (u.age > maxAge) return false;
+      
+      // Hair Color Filter
+      if (selectedHair !== 'any' && u.hair.toLowerCase() !== selectedHair.toLowerCase()) return false;
+      
+      // Eye Color Filter
+      if (selectedEyes !== 'any' && u.eyes.toLowerCase() !== selectedEyes.toLowerCase()) return false;
+      
+      // Premium Service Filter
+      if (selectedService !== 'any' && u.service.toLowerCase() !== selectedService.toLowerCase()) return false;
+      
+      return true;
+    });
+  }, [processedUsers, selectedCountry, selectedProvince, city, maxDistance, maxAge, selectedHair, selectedEyes, selectedService]);
 
   // Clean filters
   const handleClearFilters = () => {
@@ -633,11 +643,12 @@ export default function UserDirectory() {
                     {/* Avatar circle pointer marker */}
                     <div className={`h-11 w-11 rounded-full border bg-[#050505] p-0.5 overflow-hidden shadow-2xl transition-all duration-300 ${isActiveHovered ? 'ring-2 ring-red-600 scale-115' : 'border-white/10 group-hover/pulsar:border-red-500/50'}`}>
                       {u.avatar_url ? (
-                        <img 
+                        <OptimizedImage 
                           src={u.avatar_url} 
                           alt="" 
                           className="h-full w-full object-cover rounded-full select-none" 
-                          referrerPolicy="no-referrer"
+                          containerClassName="h-full w-full"
+                          transform={IMAGE_SIZES.AVATAR_SM}
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-white/40 uppercase text-[10px] font-black">
@@ -671,7 +682,13 @@ export default function UserDirectory() {
                   <div className="flex items-center space-x-4">
                     <div className="h-14 w-14 rounded-full border border-white/10 overflow-hidden shrink-0">
                       {radarHoveredUser.avatar_url ? (
-                        <img src={radarHoveredUser.avatar_url} alt="" className="h-full w-full object-cover select-none" referrerPolicy="no-referrer" />
+                        <OptimizedImage 
+                          src={radarHoveredUser.avatar_url} 
+                          alt="" 
+                          className="h-full w-full object-cover select-none" 
+                          containerClassName="h-full w-full"
+                          transform={IMAGE_SIZES.AVATAR_MD}
+                        />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-white/5 text-white/30 text-lg uppercase font-bold">
                           {radarHoveredUser.full_name?.[0] || 'U'}

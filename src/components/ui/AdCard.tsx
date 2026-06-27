@@ -8,6 +8,8 @@ import { cn } from '@/src/lib/utils';
 import { Button } from './Button';
 import { useAuth } from '@/src/hooks/useAuth';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { OptimizedImage } from './OptimizedImage';
+import { IMAGE_SIZES } from '@/src/lib/images';
 
 interface AdCardProps {
   ad: Ad;
@@ -220,13 +222,12 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
                 playsInline
               />
             ) : (
-              <img 
+              <OptimizedImage 
                 src={ad.image_url} 
                 alt={ad.title}
-                loading="lazy"
-                decoding="async"
                 className="w-full h-auto max-h-[600px] object-contain transition-transform duration-700 group-hover:scale-110"
-                referrerPolicy="no-referrer"
+                containerClassName="w-full h-auto"
+                transform={IMAGE_SIZES.FEED_POST}
               />
             )
           )}
@@ -458,12 +459,12 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
                       playsInline
                     />
                   ) : (
-                    <img 
+                    <OptimizedImage 
                       src={ad.image_url} 
                       alt={ad.title}
-                      decoding="async"
                       className="w-full h-auto max-h-[75vh] object-contain shadow-2xl"
-                      referrerPolicy="no-referrer"
+                      containerClassName="w-full h-auto"
+                      transform={IMAGE_SIZES.FEED_POST}
                     />
                   )
                 )}
