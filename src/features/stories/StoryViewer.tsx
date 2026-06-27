@@ -176,14 +176,14 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
               {story.media_type === 'video' ? (
                 <video 
                   src={story.media_url} 
-                  className="w-full h-full object-cover" 
+                  className="w-full h-full object-contain" 
                   autoPlay 
                   muted 
                   playsInline
                   onEnded={handleNext}
                 />
               ) : (
-                <img src={story.media_url} alt="" className="w-full h-full object-cover" />
+                <img src={story.media_url} alt="" className="w-full h-full object-contain" />
               )}
             </motion.div>
           </AnimatePresence>

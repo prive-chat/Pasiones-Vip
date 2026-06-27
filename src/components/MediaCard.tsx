@@ -286,7 +286,7 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
     >
       <Card className="overflow-hidden bg-[#0A0A0A] border border-white/5 group/card shadow-2xl rounded-3xl transition-all duration-500 hover:border-primary-600/30">
         <div 
-          className="aspect-[4/5] w-full bg-black/40 relative overflow-hidden flex items-center justify-center select-none"
+          className="w-full bg-black/40 relative overflow-hidden flex items-center justify-center select-none min-h-[250px]"
           style={{
             userSelect: 'none',
             WebkitUserSelect: 'none'
@@ -392,7 +392,7 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
               <video 
                 src={item.url} 
                 className={cn(
-                  "relative z-10 h-full w-full object-contain transition-all duration-500",
+                  "relative z-10 w-full h-auto max-h-[70vh] object-contain transition-all duration-500",
                   !isUnlocked && "blur-[80px] grayscale select-none pointer-events-none"
                 )} 
               />
@@ -401,10 +401,10 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                 src={item.url} 
                 alt={item.caption || ''} 
                 className={cn(
-                  "relative z-10 h-full w-full object-contain transition-all duration-700 group-hover/card:scale-105",
+                  "relative z-10 w-full h-auto max-h-[70vh] object-contain transition-all duration-700 group-hover/card:scale-105",
                   !isUnlocked && "blur-[80px] grayscale select-none pointer-events-none"
                 )}
-                containerClassName="h-full w-full"
+                containerClassName="w-full h-auto"
                 transform={IMAGE_SIZES.FEED_POST}
               />
             )

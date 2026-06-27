@@ -78,9 +78,9 @@ export default function StoryUploadModal({ onComplete }: StoryUploadModalProps) 
         <div className="space-y-6">
           <div className="relative aspect-[9/16] w-64 mx-auto rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
             {file?.type.startsWith('video') ? (
-              <video src={preview} className="w-full h-full object-cover" autoPlay muted loop />
+              <video src={preview} className="w-full h-full object-contain" autoPlay muted loop />
             ) : (
-              <img src={preview} className="w-full h-full object-cover" alt="Preview" />
+              <img src={preview} className="w-full h-full object-contain" alt="Preview" />
             )}
             <button 
               onClick={() => { setFile(null); setPreview(null); }}

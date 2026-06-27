@@ -108,7 +108,7 @@ export default function PostPage() {
       >
         <Card className="overflow-hidden glass-card border-none">
           <div 
-            className="aspect-square w-full bg-black/40 relative cursor-pointer overflow-hidden flex items-center justify-center"
+            className="w-full bg-black/40 relative cursor-pointer overflow-hidden flex items-center justify-center min-h-[300px]"
             onClick={() => setViewerMedia({ url: item.url, type: item.type as 'image' | 'video' })}
           >
             <div 
@@ -123,12 +123,12 @@ export default function PostPage() {
             
             {item.url && (
               item.type === 'video' ? (
-                <video src={item.url} className="relative z-10 h-full w-full object-contain" controls />
+                <video src={item.url} className="relative z-10 w-full h-auto max-h-[75vh] object-contain" controls />
               ) : (
                 <img 
                   src={item.url} 
                   alt={item.caption || ''} 
-                  className="relative z-10 h-full w-full object-contain" 
+                  className="relative z-10 w-full h-auto max-h-[75vh] object-contain" 
                   referrerPolicy="no-referrer" 
                 />
               )
