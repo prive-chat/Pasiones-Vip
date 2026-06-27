@@ -14,6 +14,9 @@ export interface ProfileMetadata {
   whatsapp?: string;
   onlyfans?: string;
   facebook?: string;
+  stripchat?: string;
+  kick?: string;
+  clapper?: string;
 }
 
 /**

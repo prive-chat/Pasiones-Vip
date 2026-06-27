@@ -36,6 +36,9 @@ export default function SettingsPage() {
   const [whatsapp, setWhatsapp] = useState('');
   const [onlyfans, setOnlyfans] = useState('');
   const [facebook, setFacebook] = useState('');
+  const [stripchat, setStripchat] = useState('');
+  const [kick, setKick] = useState('');
+  const [clapper, setClapper] = useState('');
   
   // Advanced biological and location specifications
   const [age, setAge] = useState<number>(25);
@@ -269,6 +272,9 @@ export default function SettingsPage() {
       setWhatsapp(metadata.whatsapp || '');
       setOnlyfans(metadata.onlyfans || '');
       setFacebook(metadata.facebook || '');
+      setStripchat(metadata.stripchat || '');
+      setKick(metadata.kick || '');
+      setClapper(metadata.clapper || '');
     }
   }, [profile]);
 
@@ -306,7 +312,10 @@ export default function SettingsPage() {
         telegram: telegram.trim() || undefined,
         whatsapp: whatsapp.trim() || undefined,
         onlyfans: onlyfans.trim() || undefined,
-        facebook: facebook.trim() || undefined
+        facebook: facebook.trim() || undefined,
+        stripchat: stripchat.trim() || undefined,
+        kick: kick.trim() || undefined,
+        clapper: clapper.trim() || undefined
       };
       const finalBio = serializeProfileBio(bio, metadataBlock);
 
@@ -1231,6 +1240,54 @@ export default function SettingsPage() {
                           value={facebook}
                           onChange={(e) => setFacebook(e.target.value)}
                           placeholder="https://facebook.com/tu_usuario"
+                          variant="glass"
+                          className="text-xs"
+                          disabled={!profile?.is_verified}
+                        />
+                      </div>
+
+                      {/* Stripchat */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-white/60 ml-1 flex items-center gap-1.5">
+                          <img src="https://stripchat.com/favicon.ico" alt="Stripchat" className="w-4 h-4 rounded-sm" />
+                          Stripchat
+                        </label>
+                        <Input
+                          value={stripchat}
+                          onChange={(e) => setStripchat(e.target.value)}
+                          placeholder="https://stripchat.com/tu_usuario"
+                          variant="glass"
+                          className="text-xs"
+                          disabled={!profile?.is_verified}
+                        />
+                      </div>
+
+                      {/* Kick */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-white/60 ml-1 flex items-center gap-1.5">
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/e/e0/Kick_logo.svg" alt="Kick" className="w-4 h-4" />
+                          Kick
+                        </label>
+                        <Input
+                          value={kick}
+                          onChange={(e) => setKick(e.target.value)}
+                          placeholder="https://kick.com/tu_usuario"
+                          variant="glass"
+                          className="text-xs"
+                          disabled={!profile?.is_verified}
+                        />
+                      </div>
+
+                      {/* Clapper */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-white/60 ml-1 flex items-center gap-1.5">
+                          <img src="https://clapperapp.com/favicon.ico" alt="Clapper" className="w-4 h-4 rounded-sm" />
+                          Clapper
+                        </label>
+                        <Input
+                          value={clapper}
+                          onChange={(e) => setClapper(e.target.value)}
+                          placeholder="https://clapperapp.com/tu_usuario"
                           variant="glass"
                           className="text-xs"
                           disabled={!profile?.is_verified}

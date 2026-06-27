@@ -445,7 +445,7 @@ export default function UserProfilePage() {
 
             {(() => {
               const { metadata } = parseProfileBio(profile.bio || '');
-              const hasSocials = !!(metadata.instagram || metadata.twitter || metadata.tiktok || metadata.telegram || metadata.whatsapp || metadata.onlyfans || metadata.facebook);
+              const hasSocials = !!(metadata.instagram || metadata.twitter || metadata.tiktok || metadata.telegram || metadata.whatsapp || metadata.onlyfans || metadata.facebook || metadata.stripchat || metadata.kick || metadata.clapper);
               
               if (!profile.is_verified || !hasSocials) return null;
               
@@ -520,6 +520,42 @@ export default function UserProfilePage() {
                           <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Facebook" className="w-5 h-5 group-hover:scale-110 transition-transform" />
                         </a>
                       )}
+                      {metadata.stripchat && (
+                        <a
+                          href={metadata.stripchat.startsWith('http') ? metadata.stripchat : `https://stripchat.com/${metadata.stripchat}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          referrerPolicy="no-referrer"
+                          className="group relative flex items-center justify-center w-11 h-11 rounded-full bg-zinc-950/80 border border-white/10 hover:border-red-500/50 shadow-lg hover:shadow-red-500/10 transition-all duration-300"
+                          title="Sigue en Stripchat"
+                        >
+                          <img src="https://stripchat.com/favicon.ico" alt="Stripchat" className="w-5 h-5 rounded-full group-hover:scale-110 transition-transform" />
+                        </a>
+                      )}
+                      {metadata.kick && (
+                        <a
+                          href={metadata.kick.startsWith('http') ? metadata.kick : `https://kick.com/${metadata.kick}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          referrerPolicy="no-referrer"
+                          className="group relative flex items-center justify-center w-11 h-11 rounded-full bg-zinc-950/80 border border-white/10 hover:border-green-500/50 shadow-lg hover:shadow-green-500/10 transition-all duration-300"
+                          title="Sigue en Kick"
+                        >
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/e/e0/Kick_logo.svg" alt="Kick" className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        </a>
+                      )}
+                      {metadata.clapper && (
+                        <a
+                          href={metadata.clapper.startsWith('http') ? metadata.clapper : `https://clapperapp.com/${metadata.clapper}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          referrerPolicy="no-referrer"
+                          className="group relative flex items-center justify-center w-11 h-11 rounded-full bg-zinc-950/80 border border-white/10 hover:border-amber-500/50 shadow-lg hover:shadow-amber-500/10 transition-all duration-300"
+                          title="Sigue en Clapper"
+                        >
+                          <img src="https://clapperapp.com/favicon.ico" alt="Clapper" className="w-5 h-5 rounded-full group-hover:scale-110 transition-transform" />
+                        </a>
+                      )}
                       {metadata.telegram && (
                         <a
                           href={metadata.telegram.startsWith('http') ? metadata.telegram : `https://t.me/${metadata.telegram.replace('@', '')}`}
@@ -570,6 +606,9 @@ export default function UserProfilePage() {
                         {metadata.tiktok && <div className="w-6 h-6 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center"><img src="https://upload.wikimedia.org/wikipedia/commons/3/34/Ionicons_logo-tiktok.svg" className="w-3 h-3 invert" /></div>}
                         {metadata.onlyfans && <div className="w-6 h-6 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center"><img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Onlyfans_logo.svg" className="w-3 h-3 grayscale" /></div>}
                         {metadata.facebook && <div className="w-6 h-6 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center"><img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" className="w-3 h-3 grayscale" /></div>}
+                        {metadata.stripchat && <div className="w-6 h-6 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center"><img src="https://stripchat.com/favicon.ico" className="w-3 h-3 rounded-full grayscale" /></div>}
+                        {metadata.kick && <div className="w-6 h-6 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center"><img src="https://upload.wikimedia.org/wikipedia/commons/e/e0/Kick_logo.svg" className="w-3 h-3" /></div>}
+                        {metadata.clapper && <div className="w-6 h-6 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center"><img src="https://clapperapp.com/favicon.ico" className="w-3 h-3 rounded-full grayscale" /></div>}
                       </div>
                     </div>
                   )}
