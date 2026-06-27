@@ -7,6 +7,12 @@ export interface ProfileMetadata {
   country?: string;
   province?: string;
   city?: string;
+  instagram?: string;
+  twitter?: string;
+  tiktok?: string;
+  telegram?: string;
+  whatsapp?: string;
+  onlyfans?: string;
 }
 
 /**

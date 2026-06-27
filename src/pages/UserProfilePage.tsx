@@ -442,6 +442,127 @@ export default function UserProfilePage() {
                 Miembro desde {new Date(profile.created_at).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
               </span>
             </div>
+
+            {(() => {
+              const { metadata } = parseProfileBio(profile.bio || '');
+              const hasSocials = !!(metadata.instagram || metadata.twitter || metadata.tiktok || metadata.telegram || metadata.whatsapp || metadata.onlyfans);
+              
+              if (!profile.is_verified || !hasSocials) return null;
+              
+              return (
+                <div className="mt-6 border-t border-white/5 pt-5 w-full max-w-md mx-auto md:mx-0">
+                  <div className="flex items-center gap-2 mb-3 justify-center md:justify-start">
+                    <div className="w-5 h-5 rounded-md bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                      <Share2 size={11} />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-white/50">Redes VIP</span>
+                  </div>
+
+                  {(isMe || isSubscribed) ? (
+                    <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+                      {metadata.instagram && (
+                        <a
+                          href={metadata.instagram.startsWith('http') ? metadata.instagram : `https://instagram.com/${metadata.instagram.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          referrerPolicy="no-referrer"
+                          className="group relative flex items-center justify-center w-11 h-11 rounded-full bg-zinc-950/80 border border-white/10 hover:border-pink-500/50 shadow-lg hover:shadow-pink-500/10 transition-all duration-300"
+                          title="Sigue en Instagram"
+                        >
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg" alt="Instagram" className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        </a>
+                      )}
+                      {metadata.twitter && (
+                        <a
+                          href={metadata.twitter.startsWith('http') ? metadata.twitter : `https://x.com/${metadata.twitter.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          referrerPolicy="no-referrer"
+                          className="group relative flex items-center justify-center w-11 h-11 rounded-full bg-zinc-950/80 border border-white/10 hover:border-white/50 shadow-lg hover:shadow-white/10 transition-all duration-300"
+                          title="Sigue en X"
+                        >
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/5/57/X_logo_2023_original.svg" alt="X / Twitter" className="w-4 h-4 invert group-hover:scale-110 transition-transform" />
+                        </a>
+                      )}
+                      {metadata.tiktok && (
+                        <a
+                          href={metadata.tiktok.startsWith('http') ? metadata.tiktok : `https://tiktok.com/@${metadata.tiktok.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          referrerPolicy="no-referrer"
+                          className="group relative flex items-center justify-center w-11 h-11 rounded-full bg-zinc-950/80 border border-white/10 hover:border-teal-400/50 shadow-lg hover:shadow-teal-400/10 transition-all duration-300"
+                          title="Sigue en TikTok"
+                        >
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/3/34/Ionicons_logo-tiktok.svg" alt="TikTok" className="w-5 h-5 invert group-hover:scale-110 transition-transform" />
+                        </a>
+                      )}
+                      {metadata.onlyfans && (
+                        <a
+                          href={metadata.onlyfans.startsWith('http') ? metadata.onlyfans : `https://onlyfans.com/${metadata.onlyfans}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          referrerPolicy="no-referrer"
+                          className="group relative flex items-center justify-center w-11 h-11 rounded-full bg-zinc-950/80 border border-white/10 hover:border-sky-400/50 shadow-lg hover:shadow-sky-400/10 transition-all duration-300"
+                          title="Sigue en OnlyFans"
+                        >
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Onlyfans_logo.svg" alt="OnlyFans" className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        </a>
+                      )}
+                      {metadata.telegram && (
+                        <a
+                          href={metadata.telegram.startsWith('http') ? metadata.telegram : `https://t.me/${metadata.telegram.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          referrerPolicy="no-referrer"
+                          className="group relative flex items-center justify-center w-11 h-11 rounded-full bg-zinc-950/80 border border-white/10 hover:border-blue-400/50 shadow-lg hover:shadow-blue-400/10 transition-all duration-300"
+                          title="Contacto en Telegram"
+                        >
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="Telegram" className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        </a>
+                      )}
+                      {metadata.whatsapp && (
+                        <a
+                          href={metadata.whatsapp.startsWith('http') ? metadata.whatsapp : (metadata.whatsapp.match(/^\d+$/) ? `https://wa.me/${metadata.whatsapp}` : `https://wa.me/${metadata.whatsapp.replace(/\D/g, '')}`)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          referrerPolicy="no-referrer"
+                          className="group relative flex items-center justify-center w-11 h-11 rounded-full bg-zinc-950/80 border border-white/10 hover:border-green-500/50 shadow-lg hover:shadow-green-500/10 transition-all duration-300"
+                          title="Contacto en WhatsApp"
+                        >
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <div 
+                      onClick={() => setIsSubscribeModalOpen(true)}
+                      className="group cursor-pointer relative overflow-hidden bg-gradient-to-r from-zinc-950 to-zinc-900 border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:bg-white/[0.02] hover:border-amber-500/20 transition-all duration-300"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 group-hover:scale-105 transition-transform duration-300">
+                          <Lock size={16} />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1">
+                            Redes Sociales Bloqueadas
+                            <Star size={10} className="fill-amber-400 text-amber-400 animate-pulse" />
+                          </p>
+                          <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">
+                            Disponible solo para Suscriptores VIP
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-1.5 opacity-30 group-hover:opacity-100 transition-opacity duration-300 filter blur-[2px] group-hover:blur-0">
+                        {metadata.instagram && <div className="w-6 h-6 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center"><img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg" className="w-3 h-3 grayscale" /></div>}
+                        {metadata.twitter && <div className="w-6 h-6 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center"><img src="https://upload.wikimedia.org/wikipedia/commons/5/57/X_logo_2023_original.svg" className="w-3 h-3 invert" /></div>}
+                        {metadata.tiktok && <div className="w-6 h-6 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center"><img src="https://upload.wikimedia.org/wikipedia/commons/3/34/Ionicons_logo-tiktok.svg" className="w-3 h-3 invert" /></div>}
+                        {metadata.onlyfans && <div className="w-6 h-6 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center"><img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Onlyfans_logo.svg" className="w-3 h-3 grayscale" /></div>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Actions */}

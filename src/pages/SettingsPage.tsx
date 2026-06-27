@@ -28,6 +28,14 @@ export default function SettingsPage() {
   const [category, setCategory] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
   
+  // VIP Social Networks states
+  const [instagram, setInstagram] = useState('');
+  const [twitter, setTwitter] = useState('');
+  const [tiktok, setTiktok] = useState('');
+  const [telegram, setTelegram] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [onlyfans, setOnlyfans] = useState('');
+  
   // Advanced biological and location specifications
   const [age, setAge] = useState<number>(25);
   const [birthDate, setBirthDate] = useState<string>('');
@@ -253,6 +261,12 @@ export default function SettingsPage() {
       
       if (metadata.country) setCountry(metadata.country);
       if (metadata.province) setProvince(metadata.province);
+      setInstagram(metadata.instagram || '');
+      setTwitter(metadata.twitter || '');
+      setTiktok(metadata.tiktok || '');
+      setTelegram(metadata.telegram || '');
+      setWhatsapp(metadata.whatsapp || '');
+      setOnlyfans(metadata.onlyfans || '');
     }
   }, [profile]);
 
@@ -283,7 +297,13 @@ export default function SettingsPage() {
         service: finalService,
         country,
         province,
-        city
+        city,
+        instagram: instagram.trim() || undefined,
+        twitter: twitter.trim() || undefined,
+        tiktok: tiktok.trim() || undefined,
+        telegram: telegram.trim() || undefined,
+        whatsapp: whatsapp.trim() || undefined,
+        onlyfans: onlyfans.trim() || undefined
       };
       const finalBio = serializeProfileBio(bio, metadataBlock);
 
@@ -1071,6 +1091,131 @@ export default function SettingsPage() {
                             />
                           </motion.div>
                         )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Redes Sociales VIP Section */}
+                  <div className="bg-zinc-950/40 border border-white/5 p-5 md:p-6 rounded-3xl space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                        <Share2 size={16} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black uppercase tracking-wider text-white">Redes Sociales VIP</h4>
+                        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-0.5">
+                          Exclusivo para Perfiles Verificados • Solo visible para tus Suscriptores VIP
+                        </p>
+                      </div>
+                    </div>
+
+                    {!profile?.is_verified && (
+                      <div className="text-xs text-amber-500/80 bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex gap-2">
+                        <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold uppercase tracking-wider text-[10px]">Función Restringida</p>
+                          <p className="text-white/60 mt-1">
+                            Para activar tus enlaces de Redes Sociales, tu cuenta debe estar certificada con el <strong>Sello VIP</strong>. Puedes solicitar la verificación más abajo en esta misma página.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Instagram */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-white/60 ml-1 flex items-center gap-1.5">
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg" alt="Instagram" className="w-4 h-4" />
+                          Instagram
+                        </label>
+                        <Input
+                          value={instagram}
+                          onChange={(e) => setInstagram(e.target.value)}
+                          placeholder="https://instagram.com/tu_usuario"
+                          variant="glass"
+                          className="text-xs"
+                          disabled={!profile?.is_verified}
+                        />
+                      </div>
+
+                      {/* Twitter/X */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-white/60 ml-1 flex items-center gap-1.5">
+                          <span className="text-white text-xs font-black bg-black w-4 h-4 rounded flex items-center justify-center border border-white/20">X</span>
+                          Twitter / X
+                        </label>
+                        <Input
+                          value={twitter}
+                          onChange={(e) => setTwitter(e.target.value)}
+                          placeholder="https://x.com/tu_usuario"
+                          variant="glass"
+                          className="text-xs"
+                          disabled={!profile?.is_verified}
+                        />
+                      </div>
+
+                      {/* TikTok */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-white/60 ml-1 flex items-center gap-1.5">
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/3/34/Ionicons_logo-tiktok.svg" alt="TikTok" className="w-4 h-4 invert" />
+                          TikTok
+                        </label>
+                        <Input
+                          value={tiktok}
+                          onChange={(e) => setTiktok(e.target.value)}
+                          placeholder="https://tiktok.com/@tu_usuario"
+                          variant="glass"
+                          className="text-xs"
+                          disabled={!profile?.is_verified}
+                        />
+                      </div>
+
+                      {/* OnlyFans */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-white/60 ml-1 flex items-center gap-1.5">
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Onlyfans_logo.svg" alt="OnlyFans" className="w-4 h-4 object-contain" />
+                          OnlyFans
+                        </label>
+                        <Input
+                          value={onlyfans}
+                          onChange={(e) => setOnlyfans(e.target.value)}
+                          placeholder="https://onlyfans.com/tu_usuario"
+                          variant="glass"
+                          className="text-xs"
+                          disabled={!profile?.is_verified}
+                        />
+                      </div>
+
+                      {/* Telegram */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-white/60 ml-1 flex items-center gap-1.5">
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="Telegram" className="w-4 h-4" />
+                          Telegram
+                        </label>
+                        <Input
+                          value={telegram}
+                          onChange={(e) => setTelegram(e.target.value)}
+                          placeholder="https://t.me/tu_usuario"
+                          variant="glass"
+                          className="text-xs"
+                          disabled={!profile?.is_verified}
+                        />
+                      </div>
+
+                      {/* WhatsApp */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-white/60 ml-1 flex items-center gap-1.5">
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" className="w-4 h-4" />
+                          WhatsApp
+                        </label>
+                        <Input
+                          value={whatsapp}
+                          onChange={(e) => setWhatsapp(e.target.value)}
+                          placeholder="https://wa.me/34600000000 o enlace directo"
+                          variant="glass"
+                          className="text-xs"
+                          disabled={!profile?.is_verified}
+                        />
                       </div>
                     </div>
                   </div>
