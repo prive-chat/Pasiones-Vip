@@ -445,7 +445,7 @@ export default function UserProfilePage() {
 
             {(() => {
               const { metadata } = parseProfileBio(profile.bio || '');
-              const hasSocials = !!(metadata.instagram || metadata.twitter || metadata.tiktok || metadata.telegram || metadata.whatsapp || metadata.onlyfans);
+              const hasSocials = !!(metadata.instagram || metadata.twitter || metadata.tiktok || metadata.telegram || metadata.whatsapp || metadata.onlyfans || metadata.facebook);
               
               if (!profile.is_verified || !hasSocials) return null;
               
@@ -508,6 +508,18 @@ export default function UserProfilePage() {
                           <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Onlyfans_logo.svg" alt="OnlyFans" className="w-5 h-5 group-hover:scale-110 transition-transform" />
                         </a>
                       )}
+                      {metadata.facebook && (
+                        <a
+                          href={metadata.facebook.startsWith('http') ? metadata.facebook : `https://facebook.com/${metadata.facebook}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          referrerPolicy="no-referrer"
+                          className="group relative flex items-center justify-center w-11 h-11 rounded-full bg-zinc-950/80 border border-white/10 hover:border-blue-600/50 shadow-lg hover:shadow-blue-600/10 transition-all duration-300"
+                          title="Sigue en Facebook"
+                        >
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Facebook" className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        </a>
+                      )}
                       {metadata.telegram && (
                         <a
                           href={metadata.telegram.startsWith('http') ? metadata.telegram : `https://t.me/${metadata.telegram.replace('@', '')}`}
@@ -557,6 +569,7 @@ export default function UserProfilePage() {
                         {metadata.twitter && <div className="w-6 h-6 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center"><img src="https://upload.wikimedia.org/wikipedia/commons/5/57/X_logo_2023_original.svg" className="w-3 h-3 invert" /></div>}
                         {metadata.tiktok && <div className="w-6 h-6 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center"><img src="https://upload.wikimedia.org/wikipedia/commons/3/34/Ionicons_logo-tiktok.svg" className="w-3 h-3 invert" /></div>}
                         {metadata.onlyfans && <div className="w-6 h-6 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center"><img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Onlyfans_logo.svg" className="w-3 h-3 grayscale" /></div>}
+                        {metadata.facebook && <div className="w-6 h-6 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center"><img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" className="w-3 h-3 grayscale" /></div>}
                       </div>
                     </div>
                   )}

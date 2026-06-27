@@ -13,6 +13,7 @@ export interface ProfileMetadata {
   telegram?: string;
   whatsapp?: string;
   onlyfans?: string;
+  facebook?: string;
 }
 
 /**

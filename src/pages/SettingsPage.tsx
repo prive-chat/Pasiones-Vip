@@ -35,6 +35,7 @@ export default function SettingsPage() {
   const [telegram, setTelegram] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [onlyfans, setOnlyfans] = useState('');
+  const [facebook, setFacebook] = useState('');
   
   // Advanced biological and location specifications
   const [age, setAge] = useState<number>(25);
@@ -267,6 +268,7 @@ export default function SettingsPage() {
       setTelegram(metadata.telegram || '');
       setWhatsapp(metadata.whatsapp || '');
       setOnlyfans(metadata.onlyfans || '');
+      setFacebook(metadata.facebook || '');
     }
   }, [profile]);
 
@@ -303,7 +305,8 @@ export default function SettingsPage() {
         tiktok: tiktok.trim() || undefined,
         telegram: telegram.trim() || undefined,
         whatsapp: whatsapp.trim() || undefined,
-        onlyfans: onlyfans.trim() || undefined
+        onlyfans: onlyfans.trim() || undefined,
+        facebook: facebook.trim() || undefined
       };
       const finalBio = serializeProfileBio(bio, metadataBlock);
 
@@ -1212,6 +1215,22 @@ export default function SettingsPage() {
                           value={whatsapp}
                           onChange={(e) => setWhatsapp(e.target.value)}
                           placeholder="https://wa.me/34600000000 o enlace directo"
+                          variant="glass"
+                          className="text-xs"
+                          disabled={!profile?.is_verified}
+                        />
+                      </div>
+
+                      {/* Facebook */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-white/60 ml-1 flex items-center gap-1.5">
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Facebook" className="w-4 h-4" />
+                          Facebook
+                        </label>
+                        <Input
+                          value={facebook}
+                          onChange={(e) => setFacebook(e.target.value)}
+                          placeholder="https://facebook.com/tu_usuario"
                           variant="glass"
                           className="text-xs"
                           disabled={!profile?.is_verified}
