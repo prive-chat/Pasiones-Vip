@@ -128,7 +128,8 @@ export default function UserDirectory() {
         province: mergedProvince,
         city: mergedCity,
         coords,
-        distanceKm
+        distanceKm,
+        metadata
       };
     });
   }, [rawUsers, baseSimRef.lat, baseSimRef.lng]);
@@ -724,6 +725,149 @@ export default function UserDirectory() {
                     </div>
                   </div>
 
+                  {/* Social Networks on Radar card */}
+                  {radarHoveredUser.metadata && (
+                    (() => {
+                      const hasRadarSocials = !!(
+                        radarHoveredUser.metadata.instagram ||
+                        radarHoveredUser.metadata.twitter ||
+                        radarHoveredUser.metadata.tiktok ||
+                        radarHoveredUser.metadata.onlyfans ||
+                        radarHoveredUser.metadata.facebook ||
+                        radarHoveredUser.metadata.stripchat ||
+                        radarHoveredUser.metadata.kick ||
+                        radarHoveredUser.metadata.clapper ||
+                        radarHoveredUser.metadata.telegram ||
+                        radarHoveredUser.metadata.whatsapp
+                      );
+                      if (!hasRadarSocials) return null;
+                      return (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-4 border-t border-white/5 justify-center">
+                          {radarHoveredUser.metadata.instagram && (
+                            <a
+                              href={radarHoveredUser.metadata.instagram.startsWith('http') ? radarHoveredUser.metadata.instagram : `https://instagram.com/${radarHoveredUser.metadata.instagram.replace('@', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-7 h-7 rounded-lg bg-zinc-950 border border-white/5 hover:border-pink-600/50 shadow transition-all duration-300"
+                              title="Instagram"
+                            >
+                              <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg" alt="Instagram" className="w-4 h-4" />
+                            </a>
+                          )}
+                          {radarHoveredUser.metadata.twitter && (
+                            <a
+                              href={radarHoveredUser.metadata.twitter.startsWith('http') ? radarHoveredUser.metadata.twitter : `https://x.com/${radarHoveredUser.metadata.twitter.replace('@', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-7 h-7 rounded-lg bg-zinc-950 border border-white/5 hover:border-white/50 shadow transition-all duration-300"
+                              title="X"
+                            >
+                              <img src="https://upload.wikimedia.org/wikipedia/commons/5/57/X_logo_2023_original.svg" alt="X / Twitter" className="w-3.5 h-3.5 invert" />
+                            </a>
+                          )}
+                          {radarHoveredUser.metadata.tiktok && (
+                            <a
+                              href={radarHoveredUser.metadata.tiktok.startsWith('http') ? radarHoveredUser.metadata.tiktok : `https://tiktok.com/@${radarHoveredUser.metadata.tiktok.replace('@', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-7 h-7 rounded-lg bg-zinc-950 border border-white/5 hover:border-teal-400/50 shadow transition-all duration-300"
+                              title="TikTok"
+                            >
+                              <img src="https://upload.wikimedia.org/wikipedia/commons/3/34/Ionicons_logo-tiktok.svg" alt="TikTok" className="w-4 h-4 invert" />
+                            </a>
+                          )}
+                          {radarHoveredUser.metadata.onlyfans && (
+                            <a
+                              href={radarHoveredUser.metadata.onlyfans.startsWith('http') ? radarHoveredUser.metadata.onlyfans : `https://onlyfans.com/${radarHoveredUser.metadata.onlyfans}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-7 h-7 rounded-lg bg-zinc-950 border border-white/5 hover:border-sky-400/50 shadow transition-all duration-300"
+                              title="OnlyFans"
+                            >
+                              <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Onlyfans_logo.svg" alt="OnlyFans" className="w-4 h-4" />
+                            </a>
+                          )}
+                          {radarHoveredUser.metadata.facebook && (
+                            <a
+                              href={radarHoveredUser.metadata.facebook.startsWith('http') ? radarHoveredUser.metadata.facebook : `https://facebook.com/${radarHoveredUser.metadata.facebook}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-7 h-7 rounded-lg bg-zinc-950 border border-white/5 hover:border-blue-600/50 shadow transition-all duration-300"
+                              title="Facebook"
+                            >
+                              <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Facebook" className="w-4 h-4" />
+                            </a>
+                          )}
+                          {radarHoveredUser.metadata.stripchat && (
+                            <a
+                              href={radarHoveredUser.metadata.stripchat.startsWith('http') ? radarHoveredUser.metadata.stripchat : `https://stripchat.com/${radarHoveredUser.metadata.stripchat}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-7 h-7 rounded-lg bg-zinc-950 border border-white/5 hover:border-red-500/50 shadow transition-all duration-300"
+                              title="Stripchat"
+                            >
+                              <img src="https://stripchat.com/favicon.ico" alt="Stripchat" className="w-4 h-4 rounded-sm" />
+                            </a>
+                          )}
+                          {radarHoveredUser.metadata.kick && (
+                            <a
+                              href={radarHoveredUser.metadata.kick.startsWith('http') ? radarHoveredUser.metadata.kick : `https://kick.com/${radarHoveredUser.metadata.kick}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-7 h-7 rounded-lg bg-zinc-950 border border-white/5 hover:border-green-500/50 shadow transition-all duration-300"
+                              title="Kick"
+                            >
+                              <img src="https://upload.wikimedia.org/wikipedia/commons/e/e0/Kick_logo.svg" alt="Kick" className="w-4 h-4" />
+                            </a>
+                          )}
+                          {radarHoveredUser.metadata.clapper && (
+                            <a
+                              href={radarHoveredUser.metadata.clapper.startsWith('http') ? radarHoveredUser.metadata.clapper : `https://clapperapp.com/${radarHoveredUser.metadata.clapper}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-7 h-7 rounded-lg bg-zinc-950 border border-white/5 hover:border-amber-500/50 shadow transition-all duration-300"
+                              title="Clapper"
+                            >
+                              <img src="https://clapperapp.com/favicon.ico" alt="Clapper" className="w-4 h-4 rounded-sm" />
+                            </a>
+                          )}
+                          {radarHoveredUser.metadata.telegram && (
+                            <a
+                              href={radarHoveredUser.metadata.telegram.startsWith('http') ? radarHoveredUser.metadata.telegram : `https://t.me/${radarHoveredUser.metadata.telegram.replace('@', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-7 h-7 rounded-lg bg-zinc-950 border border-white/5 hover:border-blue-400/50 shadow transition-all duration-300"
+                              title="Telegram"
+                            >
+                              <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="Telegram" className="w-4 h-4" />
+                            </a>
+                          )}
+                          {radarHoveredUser.metadata.whatsapp && (
+                            <a
+                              href={radarHoveredUser.metadata.whatsapp.startsWith('http') ? radarHoveredUser.metadata.whatsapp : (radarHoveredUser.metadata.whatsapp.match(/^\d+$/) ? `https://wa.me/${radarHoveredUser.metadata.whatsapp}` : `https://wa.me/${radarHoveredUser.metadata.whatsapp.replace(/\D/g, '')}`)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-7 h-7 rounded-lg bg-zinc-950 border border-white/5 hover:border-green-500/50 shadow transition-all duration-300"
+                              title="WhatsApp"
+                            >
+                              <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" className="w-4 h-4" />
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })()
+                  )}
+
                   <div className="flex gap-2 pt-2">
                     <Link
                       to={`/profile/${radarHoveredUser.id}`}
@@ -834,6 +978,159 @@ export default function UserDirectory() {
                       <p className="text-primary-400 mt-0.5 leading-none italic truncate">{user.service}</p>
                     </div>
                   </div>
+
+                  {/* Social Networks on Directory Card */}
+                  {user.metadata && (
+                    (() => {
+                      const hasCardSocials = !!(
+                        user.metadata.instagram ||
+                        user.metadata.twitter ||
+                        user.metadata.tiktok ||
+                        user.metadata.onlyfans ||
+                        user.metadata.facebook ||
+                        user.metadata.stripchat ||
+                        user.metadata.kick ||
+                        user.metadata.clapper ||
+                        user.metadata.telegram ||
+                        user.metadata.whatsapp
+                      );
+                      if (!hasCardSocials) return null;
+                      return (
+                        <div className="flex flex-wrap items-center gap-1.5 mt-4 pt-3 border-t border-white/5 justify-center">
+                          {user.metadata.instagram && (
+                            <a
+                              href={user.metadata.instagram.startsWith('http') ? user.metadata.instagram : `https://instagram.com/${user.metadata.instagram.replace('@', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-6.5 h-6.5 rounded bg-zinc-950 border border-white/5 hover:border-pink-600/50 shadow transition-all duration-300"
+                              title="Instagram"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg" alt="Instagram" className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                          {user.metadata.twitter && (
+                            <a
+                              href={user.metadata.twitter.startsWith('http') ? user.metadata.twitter : `https://x.com/${user.metadata.twitter.replace('@', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-6.5 h-6.5 rounded bg-zinc-950 border border-white/5 hover:border-white/50 shadow transition-all duration-300"
+                              title="X"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <img src="https://upload.wikimedia.org/wikipedia/commons/5/57/X_logo_2023_original.svg" alt="X / Twitter" className="w-3 h-3 invert" />
+                            </a>
+                          )}
+                          {user.metadata.tiktok && (
+                            <a
+                              href={user.metadata.tiktok.startsWith('http') ? user.metadata.tiktok : `https://tiktok.com/@${user.metadata.tiktok.replace('@', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-6.5 h-6.5 rounded bg-zinc-950 border border-white/5 hover:border-teal-400/50 shadow transition-all duration-300"
+                              title="TikTok"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <img src="https://upload.wikimedia.org/wikipedia/commons/3/34/Ionicons_logo-tiktok.svg" alt="TikTok" className="w-3.5 h-3.5 invert" />
+                            </a>
+                          )}
+                          {user.metadata.onlyfans && (
+                            <a
+                              href={user.metadata.onlyfans.startsWith('http') ? user.metadata.onlyfans : `https://onlyfans.com/${user.metadata.onlyfans}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-6.5 h-6.5 rounded bg-zinc-950 border border-white/5 hover:border-sky-400/50 shadow transition-all duration-300"
+                              title="OnlyFans"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Onlyfans_logo.svg" alt="OnlyFans" className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                          {user.metadata.facebook && (
+                            <a
+                              href={user.metadata.facebook.startsWith('http') ? user.metadata.facebook : `https://facebook.com/${user.metadata.facebook}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-6.5 h-6.5 rounded bg-zinc-950 border border-white/5 hover:border-blue-600/50 shadow transition-all duration-300"
+                              title="Facebook"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Facebook" className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                          {user.metadata.stripchat && (
+                            <a
+                              href={user.metadata.stripchat.startsWith('http') ? user.metadata.stripchat : `https://stripchat.com/${user.metadata.stripchat}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-6.5 h-6.5 rounded bg-zinc-950 border border-white/5 hover:border-red-500/50 shadow transition-all duration-300"
+                              title="Stripchat"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <img src="https://stripchat.com/favicon.ico" alt="Stripchat" className="w-3.5 h-3.5 rounded-sm" />
+                            </a>
+                          )}
+                          {user.metadata.kick && (
+                            <a
+                              href={user.metadata.kick.startsWith('http') ? user.metadata.kick : `https://kick.com/${user.metadata.kick}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-6.5 h-6.5 rounded bg-zinc-950 border border-white/5 hover:border-green-500/50 shadow transition-all duration-300"
+                              title="Kick"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <img src="https://upload.wikimedia.org/wikipedia/commons/e/e0/Kick_logo.svg" alt="Kick" className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                          {user.metadata.clapper && (
+                            <a
+                              href={user.metadata.clapper.startsWith('http') ? user.metadata.clapper : `https://clapperapp.com/${user.metadata.clapper}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-6.5 h-6.5 rounded bg-zinc-950 border border-white/5 hover:border-amber-500/50 shadow transition-all duration-300"
+                              title="Clapper"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <img src="https://clapperapp.com/favicon.ico" alt="Clapper" className="w-3.5 h-3.5 rounded-sm" />
+                            </a>
+                          )}
+                          {user.metadata.telegram && (
+                            <a
+                              href={user.metadata.telegram.startsWith('http') ? user.metadata.telegram : `https://t.me/${user.metadata.telegram.replace('@', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-6.5 h-6.5 rounded bg-zinc-950 border border-white/5 hover:border-blue-400/50 shadow transition-all duration-300"
+                              title="Telegram"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="Telegram" className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                          {user.metadata.whatsapp && (
+                            <a
+                              href={user.metadata.whatsapp.startsWith('http') ? user.metadata.whatsapp : (user.metadata.whatsapp.match(/^\d+$/) ? `https://wa.me/${user.metadata.whatsapp}` : `https://wa.me/${user.metadata.whatsapp.replace(/\D/g, '')}`)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              referrerPolicy="no-referrer"
+                              className="flex items-center justify-center w-6.5 h-6.5 rounded bg-zinc-950 border border-white/5 hover:border-green-500/50 shadow transition-all duration-300"
+                              title="WhatsApp"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })()
+                  )}
                   
                   {user.role === 'super_admin' && (
                     <div className="absolute top-4 right-4">
