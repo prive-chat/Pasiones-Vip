@@ -20,6 +20,8 @@ export function OptimizedImage({
   containerClassName,
   fallbackIcon,
   transform,
+  onLoad,
+  onError,
   ...props 
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -59,14 +61,25 @@ export function OptimizedImage({
           src={optimizedSrc || ''}
           alt={alt}
           className={cn("w-full", !hasHeightOrAspect && "h-full", className)}
-          onLoad={() => setIsLoaded(true)}
-          onError={() => setHasError(true)}
+          onLoad={(e) => {
+            setIsLoaded(true);
+            if (onLoad) {
+              onLoad(e as any);
+            }
+          }}
+          onError={(e) => {
+            setHasError(true);
+            if (onError) {
+              onError(e as any);
+            }
+          }}
           referrerPolicy="no-referrer"
           loading="lazy"
           decoding="async"
           initial={false}
           animate={isLoaded ? { opacity: 1, scale: 1, filter: 'blur(0px)' } : { opacity: 0, scale: 1.05, filter: 'blur(20px)' }}
           transition={{ duration: 0.7 }}
+          {...(props as any)}
         />
       )}
     </div>

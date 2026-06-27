@@ -30,6 +30,7 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isVertical, setIsVertical] = useState(false);
 
   const shareUrl = ad.link_url || `${window.location.origin}/ad/${ad.id}`;
   const shareText = `¡Mira esta oferta!: ${ad.title}`;
@@ -210,12 +211,24 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
         </div>
 
         {/* Image/Video Container */}
-        <div className="relative overflow-hidden bg-black/40">
+        <div className={cn(
+          "relative overflow-hidden bg-black/40 w-full",
+          isVertical ? "aspect-[4/5] max-h-[600px]" : "h-auto"
+        )}>
           {ad.image_url && (
             ad.type === 'video' ? (
               <video 
                 src={ad.image_url} 
-                className="w-full h-auto max-h-[600px] object-contain transition-transform duration-700 group-hover:scale-105"
+                onLoadedMetadata={(e) => {
+                  const video = e.currentTarget;
+                  if (video.videoHeight > video.videoWidth) {
+                    setIsVertical(true);
+                  }
+                }}
+                className={cn(
+                  "w-full transition-transform duration-700 group-hover:scale-105",
+                  isVertical ? "h-full object-cover" : "h-auto max-h-[600px] object-contain"
+                )}
                 autoPlay
                 muted
                 loop
@@ -225,9 +238,18 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
               <OptimizedImage 
                 src={ad.image_url} 
                 alt={ad.title}
-                className="w-full h-auto max-h-[600px] object-contain transition-transform duration-700 group-hover:scale-110"
-                containerClassName="w-full h-auto"
+                className={cn(
+                  "w-full transition-transform duration-700 group-hover:scale-110",
+                  isVertical ? "h-full object-cover" : "h-auto max-h-[600px] object-contain"
+                )}
+                containerClassName={cn("w-full", isVertical ? "h-full" : "h-auto")}
                 transform={IMAGE_SIZES.FEED_POST}
+                onLoad={(e) => {
+                  const img = e.currentTarget;
+                  if (img.naturalHeight > img.naturalWidth) {
+                    setIsVertical(true);
+                  }
+                }}
               />
             )
           )}
@@ -425,7 +447,7 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[99999] bg-black/98 backdrop-blur-3xl flex flex-col items-center p-4 lg:p-12 overflow-y-auto"
+            className="fixed inset-0 z-[99999] bg-black/98 backdrop-blur-3xl flex flex-col items-center justify-start p-4 lg:p-12 overflow-y-auto"
             onClick={() => setIsFullscreen(false)}
           >
             {/* Close Button */}
@@ -443,7 +465,7 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
               initial={{ scale: 0.9, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 30 }}
-              className="w-full max-w-6xl flex flex-col lg:flex-row items-center gap-8 lg:gap-16 my-auto"
+              className="w-full max-w-6xl flex flex-col lg:flex-row items-center gap-8 lg:gap-16 py-12 lg:py-24 min-h-min"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Media Container */}
@@ -452,19 +474,18 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
                   ad.type === 'video' ? (
                     <video 
                       src={ad.image_url} 
-                      className="w-full h-auto max-h-[75vh] object-contain"
+                      className="max-h-[75vh] max-w-full w-auto h-auto object-contain"
                       autoPlay
                       controls
                       loop
                       playsInline
                     />
                   ) : (
-                    <OptimizedImage 
+                    <img 
                       src={ad.image_url} 
                       alt={ad.title}
-                      className="w-full h-auto max-h-[75vh] object-contain shadow-2xl"
-                      containerClassName="w-full h-auto max-h-[75vh]"
-                      transform={IMAGE_SIZES.FEED_POST}
+                      className="max-h-[75vh] max-w-full w-auto h-auto object-contain shadow-2xl"
+                      referrerPolicy="no-referrer"
                     />
                   )
                 )}

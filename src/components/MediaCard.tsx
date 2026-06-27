@@ -41,6 +41,7 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isVertical, setIsVertical] = useState(false);
 
   // Load Premium / Ephemeral Metadata dynamically
   const premiumMetadata = JSON.parse(localStorage.getItem('pasiones_vip_posts_premium_metadata') || '{}')[item.id] || null;
@@ -286,7 +287,10 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
     >
       <Card className="overflow-hidden bg-[#0A0A0A] border border-white/5 group/card shadow-2xl rounded-3xl transition-all duration-500 hover:border-primary-600/30">
         <div 
-          className="w-full bg-black/40 relative overflow-hidden flex items-center justify-center select-none min-h-[250px]"
+          className={cn(
+            "w-full bg-black/40 relative overflow-hidden flex items-center justify-center select-none",
+            isVertical ? "aspect-[4/5] max-h-[600px]" : "min-h-[250px]"
+          )}
           style={{
             userSelect: 'none',
             WebkitUserSelect: 'none'
@@ -391,8 +395,15 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
             item.type === 'video' ? (
               <video 
                 src={item.url} 
+                onLoadedMetadata={(e) => {
+                  const video = e.currentTarget;
+                  if (video.videoHeight > video.videoWidth) {
+                    setIsVertical(true);
+                  }
+                }}
                 className={cn(
-                  "relative z-10 w-full h-auto max-h-[70vh] object-contain transition-all duration-500",
+                  "relative z-10 w-full transition-all duration-500",
+                  isVertical ? "h-full object-cover" : "h-auto max-h-[70vh] object-contain",
                   !isUnlocked && "blur-[80px] grayscale select-none pointer-events-none"
                 )} 
               />
@@ -401,11 +412,18 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                 src={item.url} 
                 alt={item.caption || ''} 
                 className={cn(
-                  "relative z-10 w-full h-auto max-h-[70vh] object-contain transition-all duration-700 group-hover/card:scale-105",
+                  "relative z-10 w-full transition-all duration-700 group-hover/card:scale-105",
+                  isVertical ? "h-full object-cover" : "h-auto max-h-[70vh] object-contain",
                   !isUnlocked && "blur-[80px] grayscale select-none pointer-events-none"
                 )}
-                containerClassName="w-full h-auto"
+                containerClassName={cn("w-full", isVertical ? "h-full" : "h-auto")}
                 transform={IMAGE_SIZES.FEED_POST}
+                onLoad={(e) => {
+                  const img = e.currentTarget;
+                  if (img.naturalHeight > img.naturalWidth) {
+                    setIsVertical(true);
+                  }
+                }}
               />
             )
           )}
