@@ -17,6 +17,7 @@ import HomePage from './pages/HomePage';
 import MessagesPage from './pages/MessagesPage';
 import UserProfilePage from './pages/UserProfilePage';
 import PostPage from './pages/PostPage';
+import AdPage from './pages/AdPage';
 import NotFoundPage from './pages/NotFoundPage';
 import AdminPage from './pages/AdminPage';
 import BookingsPage from './pages/BookingsPage';
@@ -66,6 +67,7 @@ export default function App() {
                 <Route path="/auth" element={!user ? <AuthPage /> : <Navigate to="/" replace />} />
                 <Route path="/profile/:userId" element={<PageTransition><UserProfilePage /></PageTransition>} />
                 <Route path="/post/:postId" element={<PageTransition><PostPage /></PageTransition>} />
+                <Route path="/ad/:adId" element={<PageTransition><AdPage /></PageTransition>} />
                 
                 {/* Protected Routes */}
                 <Route path="/" element={user ? <PageTransition><HomePage /></PageTransition> : <Navigate to="/auth" replace />} />

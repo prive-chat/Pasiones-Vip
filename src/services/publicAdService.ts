@@ -94,5 +94,54 @@ export const publicAdService = {
       metric_type: 'click' 
     });
     if (error) console.error('Error tracking ad click:', error);
+  },
+
+  async getAdById(adId: string): Promise<Ad | null> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { data, error } = await supabase
+        .from('ads')
+        .select(`
+          *,
+          ad_likes(count),
+          shares_count
+        `)
+        .eq('id', adId)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('Error fetching ad:', error.message);
+        return null;
+      }
+
+      if (!data) return null;
+
+      let ad: Ad = {
+        ...data,
+        likes_count: data.ad_likes?.[0]?.count || 0,
+        is_liked: false,
+        reaction_type: null
+      };
+
+      if (user) {
+        const { data: userReaction } = await supabase
+          .from('ad_likes')
+          .select('type')
+          .eq('user_id', user.id)
+          .eq('ad_id', adId)
+          .maybeSingle();
+
+        if (userReaction) {
+          ad.is_liked = true;
+          ad.reaction_type = userReaction.type;
+        }
+      }
+
+      return ad;
+    } catch (err) {
+      console.warn('Unexpected error in getAdById:', err);
+      return null;
+    }
   }
 };
