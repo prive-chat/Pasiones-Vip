@@ -189,39 +189,41 @@ export default function UserDirectory() {
   return (
     <div className="min-h-[600px] space-y-8">
       {/* Search and Filters Header */}
-      <div className="flex flex-col space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nombre o usuario..."
-              className="pl-12 bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:ring-primary-600/50 h-12 rounded-2xl"
-            />
-          </div>
-          
+      <div className="flex flex-col space-y-3">
+        {/* Row 1: Full-width Search Input */}
+        <div className="relative w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nombre o usuario..."
+            className="pl-12 bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:ring-primary-600/50 h-12 rounded-2xl w-full"
+          />
+        </div>
+        
+        {/* Row 2: Action Buttons with isolated horizontal scroll on mobile */}
+        <div className="flex items-center gap-3 overflow-x-auto pb-1.5 scrollbar-none w-full snap-x">
           <Button
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
-            className={`border-white/10 shrink-0 h-12 rounded-2xl ${showFilters ? 'bg-primary-600/20 border-primary-600/50 text-white' : 'text-white/60'}`}
+            className={`border-white/10 shrink-0 h-12 rounded-2xl snap-start ${showFilters ? 'bg-primary-600/20 border-primary-600/50 text-white' : 'text-white/60'}`}
           >
             <SlidersHorizontal size={18} className="mr-2" />
             Buscador Avanzado
           </Button>
 
           {/* Toggle View Mode: Grid (MapPin layout) vs Radar sweep */}
-          <div className="flex bg-white/5 border border-white/10 p-1.5 rounded-2xl h-12 shrink-0">
+          <div className="flex bg-white/5 border border-white/10 p-1.5 rounded-2xl h-12 shrink-0 snap-start">
             <button
               onClick={() => setViewMode('grid')}
-              className={`flex items-center justify-center px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all gap-1.5 ${viewMode === 'grid' ? 'bg-primary-600 text-white shadow-xl' : 'text-white/40 hover:text-white/75'}`}
+              className={`flex items-center justify-center px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all gap-1.5 whitespace-nowrap ${viewMode === 'grid' ? 'bg-primary-600 text-white shadow-xl' : 'text-white/40 hover:text-white/75'}`}
             >
               <Grid size={14} />
               Lista
             </button>
             <button
               onClick={() => setViewMode('radar')}
-              className={`flex items-center justify-center px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all gap-1.5 ${viewMode === 'radar' ? 'bg-[#E60000] text-white shadow-lg shadow-[#E60000]/20 font-black' : 'text-white/40 hover:text-white/75'}`}
+              className={`flex items-center justify-center px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all gap-1.5 whitespace-nowrap ${viewMode === 'radar' ? 'bg-[#E60000] text-white shadow-lg shadow-[#E60000]/20 font-black' : 'text-white/40 hover:text-white/75'}`}
             >
               <Compass size={14} className="animate-spin-slow" />
               Radar Proximidad
@@ -232,7 +234,7 @@ export default function UserDirectory() {
             <Button
               variant="ghost"
               onClick={handleClearFilters}
-              className="text-primary-500 hover:text-primary-400 text-xs font-black uppercase tracking-wider shrink-0"
+              className="text-primary-500 hover:text-primary-400 text-xs font-black uppercase tracking-wider shrink-0 snap-start"
             >
               Limpiar
             </Button>

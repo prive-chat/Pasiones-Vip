@@ -37,6 +37,7 @@ export default function BookingsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected' | 'cancelled'>('all');
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   
   const { bookings, profilesMap, loading, refresh } = useBookingSync();
 
@@ -150,7 +151,7 @@ export default function BookingsPage() {
     }
   };
 
-  const copyBookingDetails = (booking: any) => {
+  const copyBookingDetails = async (booking: any) => {
     const participant = activeTab === 'received' 
       ? profilesMap[booking.clientId] 
       : profilesMap[booking.profileId];
@@ -163,12 +164,44 @@ export default function BookingsPage() {
       (booking.notes ? `Notas: ${booking.notes}\n` : '') +
       `=============================`;
 
-    navigator.clipboard.writeText(text);
-    addToast({
-      type: 'success',
-      message: 'Detalles Copiados 📋',
-      description: 'Los detalles de la cita se han copiado al portapapeles.'
-    });
+    let success = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        success = true;
+      } else {
+        // Fallback method
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        success = document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+    } catch (err) {
+      console.error('Copy failed, using manual fallback approach', err);
+    }
+
+    if (success) {
+      setCopiedId(booking.id);
+      setTimeout(() => setCopiedId(null), 2500);
+      
+      addToast({
+        type: 'success',
+        message: 'Detalles Copiados 📋',
+        description: 'Los detalles de la cita se han copiado al portapapeles.'
+      });
+    } else {
+      addToast({
+        type: 'error',
+        message: 'Error al Copiar ❌',
+        description: 'No se pudo copiar automáticamente. Por favor inténtalo de nuevo.'
+      });
+    }
   };
 
   // Filters
@@ -610,10 +643,23 @@ export default function BookingsPage() {
                         size="sm"
                         variant="outline"
                         onClick={() => copyBookingDetails(selectedBooking)}
-                        className="w-full border-white/10 hover:bg-white/5 text-white/80 font-black uppercase tracking-widest text-[10px] py-4 rounded-xl flex items-center justify-center gap-1.5"
+                        className={`w-full border-white/10 text-white/80 font-black uppercase tracking-widest text-[10px] py-4 rounded-xl flex items-center justify-center gap-1.5 transition-all duration-300 ${
+                          copiedId === selectedBooking.id 
+                            ? 'border-green-500 bg-green-500/10 text-green-400' 
+                            : 'hover:bg-white/5'
+                        }`}
                       >
-                        <Copy size={12} />
-                        Copiar Detalles de Cita
+                        {copiedId === selectedBooking.id ? (
+                          <>
+                            <Check size={12} className="text-green-400" />
+                            ¡Copiado con Éxito!
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={12} />
+                            Copiar Detalles de Cita
+                          </>
+                        )}
                       </Button>
 
                       {/* External profile link */}
