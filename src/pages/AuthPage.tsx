@@ -18,6 +18,9 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [isOver18, setIsOver18] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -168,6 +171,7 @@ export default function AuthPage() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4"
                   >
                     <Input
                       label="Confirmar Contraseña"
@@ -180,6 +184,46 @@ export default function AuthPage() {
                       rightElement={passwordToggle}
                       required
                     />
+
+                    <div className="pt-2 space-y-3">
+                      {/* Checkbox 1: Over 18 */}
+                      <label className="flex items-start gap-2.5 text-xs text-white/70 select-none cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={isOver18}
+                          onChange={(e) => setIsOver18(e.target.checked)}
+                          className="mt-0.5 w-4 h-4 rounded text-passion-red bg-zinc-800 border-white/10 focus:ring-passion-red focus:outline-none accent-passion-red cursor-pointer"
+                        />
+                        <span>
+                          Confirmo que soy <span className="text-white font-bold">mayor de 18 años</span> y tengo la edad legal para acceder a esta plataforma.
+                        </span>
+                      </label>
+
+                      {/* Checkbox 2: Accept Terms */}
+                      <label className="flex items-start gap-2.5 text-xs text-white/70 select-none cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={acceptTerms}
+                          onChange={(e) => setAcceptTerms(e.target.checked)}
+                          className="mt-0.5 w-4 h-4 rounded text-passion-red bg-zinc-800 border-white/10 focus:ring-passion-red focus:outline-none accent-passion-red cursor-pointer"
+                        />
+                        <span>
+                          Acepto los{' '}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setShowTermsModal(true);
+                            }}
+                            className="text-passion-red hover:text-white font-black underline transition-colors"
+                          >
+                            Términos y Condiciones
+                          </button>{' '}
+                          y la Política de Privacidad de Pasiones VIP.
+                        </span>
+                      </label>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -188,7 +232,12 @@ export default function AuthPage() {
                   {error}
                 </p>
               )}
-              <Button type="submit" className="w-full py-6 text-lg uppercase tracking-widest" isLoading={loading}>
+              <Button 
+                type="submit" 
+                className="w-full py-6 text-lg uppercase tracking-widest disabled:opacity-50" 
+                isLoading={loading}
+                disabled={!isLogin && (!isOver18 || !acceptTerms)}
+              >
                 {isLogin ? 'Entrar' : 'Registrarse'}
               </Button>
             </form>
@@ -222,6 +271,113 @@ export default function AuthPage() {
           </CardFooter>
         </Card>
       </motion.div>
+
+      {/* Terms and Conditions Modal */}
+      <AnimatePresence>
+        {showTermsModal && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+            {/* Modal backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowTermsModal(false)}
+              className="absolute inset-0 cursor-pointer"
+            />
+            
+            {/* Modal Box */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-zinc-950 border border-white/10 rounded-3xl overflow-hidden shadow-2xl z-10 p-6 md:p-8 flex flex-col max-h-[85vh]"
+            >
+              <div className="flex justify-between items-center pb-4 border-b border-white/10">
+                <div>
+                  <h3 className="text-lg font-black uppercase tracking-tight text-white flex items-center gap-2">
+                    <span className="w-1.5 h-6 bg-passion-red rounded-full"></span>
+                    Términos y Condiciones
+                  </h3>
+                  <p className="text-[10px] text-white/40 font-bold uppercase mt-0.5 tracking-wider">Por favor, lee detalladamente antes de continuar</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(false)}
+                  className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto py-6 pr-2 space-y-4 text-xs text-white/70 font-sans leading-relaxed">
+                <section className="space-y-2">
+                  <h4 className="text-white font-bold uppercase tracking-wide text-[11px]">1. Aceptación de los Términos</h4>
+                  <p>
+                    Al registrarse y acceder a Pasiones VIP, usted declara ser mayor de 18 años (o la mayoría de edad legal aplicable en su jurisdicción) y acepta cumplir con estos Términos y Condiciones en su totalidad. Si no está de acuerdo con alguna parte, debe abstenerse de usar nuestra plataforma.
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h4 className="text-white font-bold uppercase tracking-wide text-[11px]">2. Requisito de Mayoría de Edad</h4>
+                  <p>
+                    Este sitio web contiene material e interacciones para adultos. Queda terminantemente prohibido el acceso o registro a cualquier persona menor de 18 años. Pasiones VIP se reserva el derecho de verificar la identidad y edad de los usuarios en cualquier momento, suspendiendo de inmediato las cuentas sospechosas de falsificación.
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h4 className="text-white font-bold uppercase tracking-wide text-[11px]">3. Conducta de la Comunidad</h4>
+                  <p>
+                    Promovemos un entorno de respeto mutuo, seguridad y consentimiento libre de violencia. No toleramos el acoso, las amenazas, la discriminación ni cualquier conducta ilegal o abusiva en los mensajes o perfiles de la plataforma. El incumplimiento de estas normas resultará en la expulsión definitiva del servicio sin reembolso de saldos o suscripciones activas.
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h4 className="text-white font-bold uppercase tracking-wide text-[11px]">4. Privacidad de los Datos</h4>
+                  <p>
+                    Su privacidad es nuestra máxima prioridad. La información recolectada durante el registro y uso del servicio se procesa con encriptación avanzada de extremo a extremo. Nunca venderemos ni divulgaremos sus datos personales a terceros, salvo requerimiento judicial legal explícito.
+                  </p>
+                </section>
+
+                <section className="space-y-2">
+                  <h4 className="text-white font-bold uppercase tracking-wide text-[11px]">5. Modificaciones y Actualizaciones</h4>
+                  <p>
+                    Pasiones VIP se reserva el derecho de modificar estos términos periódicamente para adaptarlos a nuevas regulaciones o mejoras en la plataforma. Las modificaciones entrarán en vigor a partir de su publicación en el portal.
+                  </p>
+                </section>
+              </div>
+
+              {/* Accept Button at bottom of Modal */}
+              <div className="pt-4 border-t border-white/10 flex gap-3">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="flex-1 py-3 text-xs uppercase font-bold tracking-widest" 
+                  onClick={() => {
+                    setAcceptTerms(false);
+                    setShowTermsModal(false);
+                  }}
+                >
+                  Rechazar
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="primary" 
+                  className="flex-1 py-3 text-xs uppercase font-bold tracking-widest" 
+                  onClick={() => {
+                    setAcceptTerms(true);
+                    setShowTermsModal(false);
+                  }}
+                >
+                  Aceptar Términos
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
