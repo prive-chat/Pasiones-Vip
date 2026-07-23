@@ -1,0 +1,28 @@
+name: Reporte de Error
+description: Crea un reporte para ayudarnos a mejorar
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por tomarte el tiempo de reportar un error.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: ¿Qué sucedió?
+      description: Describe el error de la forma más clara posible.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Pasos para reproducir
+      description: ¿Cómo podemos ver el error nosotros mismos?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versión del navegador
+    validations:
+      required: false
