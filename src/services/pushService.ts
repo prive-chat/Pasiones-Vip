@@ -16,13 +16,26 @@ function urlBase64ToUint8Array(base64String: string) {
 export const pushService = {
   async registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-      try {
-        const registration = await navigator.serviceWorker.register('/sw.js');
-        console.log('Service Worker registrado con éxito:', registration);
-        return registration;
-      } catch (error) {
-        console.error('Error al registrar el Service Worker:', error);
-        return null;
+      const register = async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+          console.log('Service Worker registrado con éxito:', registration);
+          return registration;
+        } catch (error) {
+          console.error('Error al registrar el Service Worker:', error);
+          return null;
+        }
+      };
+
+      if (document.readyState === 'complete') {
+        return register();
+      } else {
+        return new Promise((resolve) => {
+          window.addEventListener('load', async () => {
+            const reg = await register();
+            resolve(reg);
+          });
+        });
       }
     }
     return null;
