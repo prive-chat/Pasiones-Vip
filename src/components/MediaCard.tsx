@@ -531,9 +531,9 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                       initial={{ opacity: 0, y: 10, scale: 0.8 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.8 }}
-                      className="absolute bottom-full left-0 flex items-center gap-2 p-1.5 bg-black/90 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl z-50 mb-2 pb-4"
+                      className="absolute bottom-full left-0 flex items-center p-1 bg-black/95 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl z-50 mb-2"
                     >
-                      <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-full border border-white/5">
+                      <div className="flex items-center gap-1 sm:gap-1.5 bg-black/40 p-1 sm:p-1.5 rounded-full border border-white/5">
                         {REACTIONS.map((reaction) => (
                           <motion.button
                             key={reaction.type}
@@ -548,12 +548,12 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                               setShowReactions(false);
                             }}
                             className={cn(
-                              "p-2 rounded-full transition-colors",
+                              "p-1.5 rounded-full transition-colors",
                               item.reaction_type === reaction.type ? "bg-white/10" : "hover:bg-white/5"
                             )}
                           >
                             <reaction.icon 
-                              size={20} 
+                              size={18} 
                               className={cn(
                                 reaction.color,
                                 item.reaction_type === reaction.type && reaction.fill
@@ -599,14 +599,14 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                     <motion.div
                       initial={{ opacity: 0, y: 10, scale: 0.8 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.8 }}
-                      className="absolute left-0 bottom-full flex items-center gap-2 p-1.5 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 mb-2 pb-4"
+                      exit={{ opacity: 0, y: 10, scale: 1 }}
+                      className="absolute bottom-full left-1/2 -translate-x-1/2 flex items-center p-1 bg-black/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 mb-2 max-w-[calc(100vw-2rem)]"
                     >
-                      <div className="flex items-center gap-2 bg-black/40 p-2 rounded-xl border border-white/5">
+                      <div className="flex items-center gap-1 sm:gap-1.5 bg-black/40 p-1.5 rounded-xl border border-white/5">
                         {shareActions.map((action) => (
                           <motion.button
                             key={action.name}
-                            whileHover={{ scale: 1.1, y: -2 }}
+                            whileHover={{ scale: 1.08, y: -2 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -615,14 +615,14 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                               if (action.name !== 'Copiar') setShowShareMenu(false);
                             }}
                             className={cn(
-                              "flex flex-col items-center gap-1 p-2 rounded-xl transition-all hover:bg-white/10 min-w-[60px]",
+                              "flex flex-col items-center gap-1 p-1.5 rounded-xl transition-all hover:bg-white/10 min-w-[50px] sm:min-w-[56px]",
                               action.color.replace('bg-', 'text-')
                             )}
                           >
-                            <div className={cn("p-2 rounded-lg text-white", action.color)}>
-                              {action.name === 'Copiar' && isCopied ? <CheckCircle2 size={18} /> : <action.icon size={18} />}
+                            <div className={cn("p-1.5 rounded-lg text-white", action.color)}>
+                              {action.name === 'Copiar' && isCopied ? <CheckCircle2 size={16} /> : <action.icon size={16} />}
                             </div>
-                            <span className="text-[10px] font-bold text-white/60 uppercase tracking-tighter">
+                            <span className="text-[9px] sm:text-[10px] font-bold text-white/70 uppercase tracking-tighter">
                               {action.name === 'Copiar' && isCopied ? 'Listo' : action.name}
                             </span>
                           </motion.button>
