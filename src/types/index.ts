@@ -115,7 +115,7 @@ export interface Conversation {
 export interface Notification {
   id: string;
   user_id: string;
-  type: 'message' | 'verification' | 'system' | 'like' | 'follow_request' | 'follow_accept';
+  type: 'message' | 'verification' | 'system' | 'like' | 'comment' | 'follow_request' | 'follow_accept';
   title: string;
   content: string;
   is_read: boolean;

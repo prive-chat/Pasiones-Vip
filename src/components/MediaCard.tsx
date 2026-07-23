@@ -13,6 +13,8 @@ import { mediaService } from '../services/mediaService';
 import { useAuth } from '../hooks/useAuth';
 import { subscriptionService } from '../services/subscriptionService';
 import { Card, CardContent } from './ui/Card';
+import { InlineComments } from './InlineComments';
+import { CommentsModal } from './CommentsModal';
 import { cn } from '../lib/utils';
 import { MediaItem } from '../types';
 import { OptimizedImage } from './ui/OptimizedImage';
@@ -46,6 +48,9 @@ const MediaCard = memo(({ item, index, onView, onDelete, onEdit, queryKey }: Med
   const [showReactions, setShowReactions] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [showInlineComments, setShowInlineComments] = useState(false);
+  const [commentsCount, setCommentsCount] = useState(item.comments_count || 0);
   const [isSharing, setIsSharing] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isVertical, setIsVertical] = useState(false);
@@ -656,18 +661,17 @@ const MediaCard = memo(({ item, index, onView, onDelete, onEdit, queryKey }: Med
 
               {/* 2. Comments */}
               <button
-                onClick={() => {
-                  addToast({
-                    type: 'info',
-                    message: 'Comentarios',
-                    description: 'Módulo de comentarios disponible.',
-                  });
-                }}
-                className="flex items-center space-x-1.5 rounded-xl px-3 py-2 text-white/40 hover:bg-white/5 hover:text-white transition-all duration-300"
+                onClick={() => setShowInlineComments(!showInlineComments)}
+                className={cn(
+                  "flex items-center space-x-1.5 rounded-xl px-3 py-2 transition-all duration-300",
+                  showInlineComments 
+                    ? "bg-primary-600/10 text-primary-400" 
+                    : "text-white/40 hover:bg-white/5 hover:text-white"
+                )}
                 title="Comentar"
               >
                 <MessageSquare size={19} />
-                <span className="text-xs font-black italic tracking-wider">{item.comments_count || 0}</span>
+                <span className="text-xs font-black italic tracking-wider">{commentsCount}</span>
               </button>
 
               {/* 3. Share */}
@@ -779,7 +783,24 @@ const MediaCard = memo(({ item, index, onView, onDelete, onEdit, queryKey }: Med
             </div>
           </div>
         </CardContent>
+
+        {/* Inline Expandable Comments */}
+        <InlineComments
+          mediaId={item.id}
+          postOwnerId={item.user_id}
+          isOpen={showInlineComments}
+          onClose={() => setShowInlineComments(false)}
+          onCommentCountChange={(count) => setCommentsCount(count)}
+        />
       </Card>
+
+      <CommentsModal
+        isOpen={showCommentsModal}
+        onClose={() => setShowCommentsModal(false)}
+        mediaId={item.id}
+        postOwnerId={item.user_id}
+        onCommentCountChange={(count) => setCommentsCount(count)}
+      />
     </motion.div>
   );
 });
