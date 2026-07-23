@@ -286,6 +286,67 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
       transition={{ delay: index * 0.05 }}
     >
       <Card className="overflow-hidden bg-[#0A0A0A] border border-white/5 group/card shadow-2xl rounded-3xl transition-all duration-500 hover:border-primary-600/30">
+        {/* Top Header: User Full Name, Username & Meta */}
+        <div className="p-4 md:p-5 flex items-center justify-between border-b border-white/5">
+          <Link to={`/profile/${item.user_id}`} className="flex items-center space-x-3 group/user min-w-0">
+            <div className="h-10 w-10 rounded-full bg-primary-600/10 flex items-center justify-center text-primary-400 font-black text-sm overflow-hidden ring-2 ring-white/5 transition-all group-hover/user:ring-primary-600/50 group-hover/user:scale-110 shadow-lg shrink-0">
+              {item.profiles?.avatar_url ? (
+                <OptimizedImage 
+                  src={item.profiles.avatar_url} 
+                  alt="" 
+                  className="h-full w-full object-cover" 
+                  containerClassName="h-full w-full"
+                  transform={IMAGE_SIZES.AVATAR_SM}
+                />
+              ) : (
+                item.profiles?.full_name?.[0] || 'U'
+              )}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center space-x-1.5">
+                <span className="text-sm font-black text-white group-hover/user:text-primary-400 transition-colors uppercase tracking-tight italic truncate">
+                  {item.profiles?.full_name || 'Miembro de la Red'}
+                </span>
+                {item.profiles?.is_verified && (
+                  <CheckCircle2 size={14} className="text-primary-400 fill-primary-400/10 shrink-0" />
+                )}
+              </div>
+              <div className="flex items-center space-x-2 min-w-0">
+                <span className="text-xs font-bold text-primary-400/90 truncate">
+                  {item.profiles?.username ? `@${item.profiles.username}` : `@${(item.profiles?.full_name || 'usuario').toLowerCase().replace(/\s+/g, '')}`}
+                </span>
+                <span className="text-white/20 shrink-0">•</span>
+                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest shrink-0">
+                  {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                </span>
+              </div>
+            </div>
+          </Link>
+
+          <div className="flex items-center space-x-1 shrink-0">
+            {item.profiles?.is_verified && item.user_id !== user?.id && (
+              <Link
+                to={`/messages?to=${item.user_id}&ref=${item.id}`}
+                className="rounded-xl p-2 text-white/40 hover:bg-white/5 hover:text-primary-400 transition-colors"
+                title="Enviar mensaje"
+              >
+                <MessageSquare size={18} />
+              </Link>
+            )}
+
+            {item.user_id === user?.id && onDelete && (
+              <button
+                onClick={() => onDelete(item.id)}
+                className="rounded-xl p-2 text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                title="Eliminar publicación"
+              >
+                <Trash2 size={18} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Middle Content: Multimedia (Image / Video) */}
         <div 
           className={cn(
             "w-full bg-black/40 relative overflow-hidden flex items-center justify-center select-none",
@@ -450,36 +511,10 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
             </div>
           )}
         </div>
-        <CardContent className="p-5 md:p-6">
-          <div className="mb-3 md:mb-4 flex items-center justify-between">
-            <Link to={`/profile/${item.user_id}`} className="flex items-center space-x-3 group/user">
-              <div className="h-10 w-10 rounded-full bg-primary-600/10 flex items-center justify-center text-primary-400 font-black text-sm overflow-hidden ring-2 ring-white/5 transition-all group-hover/user:ring-primary-600/50 group-hover/user:scale-110 shadow-lg">
-                {item.profiles?.avatar_url ? (
-                  <OptimizedImage 
-                    src={item.profiles.avatar_url} 
-                    alt="" 
-                    className="h-full w-full object-cover" 
-                    containerClassName="h-full w-full"
-                    transform={IMAGE_SIZES.AVATAR_SM}
-                  />
-                ) : (
-                  item.profiles?.full_name?.[0] || 'U'
-                )}
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-center space-x-1.5">
-                  <span className="text-sm font-black text-white group-hover/user:text-primary-400 transition-colors uppercase tracking-tight italic">
-                    {item.profiles?.full_name || 'Miembro de la Red'}
-                  </span>
-                  {item.profiles?.is_verified && (
-                    <CheckCircle2 size={14} className="text-primary-400 fill-primary-400/10" />
-                  )}
-                </div>
-                <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
-                  {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
-                </span>
-              </div>
-            </Link>
+
+        {/* Bottom Area: Interaction Bar & Description */}
+        <CardContent className="p-4 md:p-5 space-y-3">
+          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div className="relative" onMouseEnter={() => setShowReactions(true)} onMouseLeave={() => setShowReactions(false)}>
                 <AnimatePresence>
@@ -488,7 +523,7 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                       initial={{ opacity: 0, y: 10, scale: 0.8 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.8 }}
-                      className="absolute bottom-full left-1/2 -translate-x-1/2 flex items-center gap-2 p-1.5 bg-black/90 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl z-50 mb-2 pb-4"
+                      className="absolute bottom-full left-0 flex items-center gap-2 p-1.5 bg-black/90 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl z-50 mb-2 pb-4"
                     >
                       <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-full border border-white/5">
                         {REACTIONS.map((reaction) => (
@@ -531,7 +566,7 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                     currentReaction: item.reaction_type
                   })}
                   className={cn(
-                    "flex items-center space-x-2 rounded-xl px-4 py-2 transition-all duration-300 group/like",
+                    "flex items-center space-x-2 rounded-xl px-3.5 py-2 transition-all duration-300 group/like",
                     item.is_liked ? "bg-primary-600/10 text-primary-400" : "text-white/40 hover:bg-white/5 hover:text-white"
                   )}
                 >
@@ -557,7 +592,7 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                       initial={{ opacity: 0, y: 10, scale: 0.8 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.8 }}
-                      className="absolute right-0 bottom-full flex items-center gap-2 p-1.5 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 mb-2 pb-4"
+                      className="absolute left-0 bottom-full flex items-center gap-2 p-1.5 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 mb-2 pb-4"
                     >
                       <div className="flex items-center gap-2 bg-black/40 p-2 rounded-xl border border-white/5">
                         {shareActions.map((action) => (
@@ -594,7 +629,7 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                 <button
                   onClick={() => setShowShareMenu(!showShareMenu)}
                   className={cn(
-                    "flex items-center space-x-2 rounded-xl px-4 py-2 transition-all duration-300",
+                    "flex items-center space-x-2 rounded-xl px-3.5 py-2 transition-all duration-300",
                     isSharing ? "bg-primary-600/10 text-primary-400" : "text-white/40 hover:bg-white/5 hover:text-white"
                   )}
                 >
@@ -602,28 +637,11 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                   <span className="text-xs font-black italic tracking-wider">{item.shares_count || 0}</span>
                 </button>
               </div>
-
-              {item.profiles?.is_verified && item.user_id !== user?.id && (
-                <Link
-                  to={`/messages?to=${item.user_id}&ref=${item.id}`}
-                  className="rounded-xl p-2 text-white/20 hover:bg-white/5 hover:text-primary-400 transition-colors"
-                >
-                  <MessageSquare size={20} />
-                </Link>
-              )}
-
-              {item.user_id === user?.id && onDelete && (
-                <button
-                  onClick={() => onDelete(item.id)}
-                  className="rounded-xl p-2 text-white/20 hover:bg-red-500/10 hover:text-red-400 transition-colors"
-                >
-                  <Trash2 size={20} />
-                </button>
-              )}
             </div>
           </div>
+
           {item.caption && (
-            <p className="text-sm text-white/50 line-clamp-3 leading-relaxed font-medium bg-white/5 p-4 rounded-2xl border border-white/5">
+            <p className="text-sm text-white/70 line-clamp-3 leading-relaxed font-medium bg-white/5 p-3.5 rounded-2xl border border-white/5">
               {item.caption}
             </p>
           )}
