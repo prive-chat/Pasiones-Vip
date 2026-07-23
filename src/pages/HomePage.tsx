@@ -34,7 +34,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#0A0A0A]">
       {view === 'feed' && <UserIdentityBar />}
       
-      <div className="container mx-auto max-w-6xl px-4 py-8">
+      <div className="container mx-auto max-w-6xl px-4 py-6 md:py-8">
         <HomeActionArea
           leftContent={
             profile && !profile.is_verified && (
@@ -79,9 +79,9 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98 }}
-              className="mb-12"
+              className="mb-8"
             >
-              <div className="mb-8 flex items-center justify-between border-b border-white/5 pb-6">
+              <div className="mb-6 flex items-center justify-between border-b border-white/5 pb-5">
                 <div className="flex items-center space-x-4">
                   <div className="h-12 w-12 rounded-2xl bg-primary-600/20 flex items-center justify-center text-primary-400">
                     <Users size={24} />
@@ -103,10 +103,10 @@ export default function HomePage() {
             >
               <HighlightStories />
 
-              <div id="main-feed" className="flex flex-col lg:flex-row justify-center gap-12">
+              <div id="main-feed" className="flex flex-col lg:flex-row justify-center gap-8 lg:gap-10">
                 {/* Centered Content Section */}
-                <section className="w-full max-w-2xl space-y-12">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                <section className="w-full max-w-2xl space-y-8">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-4">
                     <div className="flex items-center space-x-3">
                       <LayoutGrid size={20} className="text-primary-600" />
                       <h2 className="text-xl font-black tracking-widest text-white uppercase italic">Feed de Actividad</h2>
@@ -120,7 +120,7 @@ export default function HomePage() {
                   {/* Featured Content Spot */}
                   {ads.length > 0 && (
                     <div className="lg:hidden">
-                      <div className="mb-4 flex items-center gap-2">
+                      <div className="mb-3 flex items-center gap-2">
                         <Sparkles size={14} className="text-amber-400" />
                         <span className="text-[10px] font-black uppercase text-amber-400 tracking-widest">Recomendación Premium</span>
                       </div>
@@ -132,14 +132,14 @@ export default function HomePage() {
                 </section>
 
                 {/* Right Sidebar (Desktop only) */}
-                <aside className="hidden lg:block w-80 shrink-0 space-y-10">
+                <aside className="hidden lg:block w-80 shrink-0 space-y-8">
                   <TrendingSidebar />
                   
-                  <div className="sticky top-24 space-y-10">
-                    <div className="p-8 rounded-[2.5rem] bg-zinc-950 border border-white/5 shadow-2xl relative overflow-hidden group">
+                  <div className="sticky top-24 space-y-8">
+                    <div className="p-6 md:p-8 rounded-[2.5rem] bg-zinc-950 border border-white/5 shadow-2xl relative overflow-hidden group">
                       <div className="absolute inset-0 bg-gradient-to-br from-primary-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                       
-                      <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center justify-between mb-6">
                         <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] flex items-center gap-3">
                           <Megaphone size={14} className="text-primary-500" />
                           Espacio Publicitario
@@ -155,7 +155,7 @@ export default function HomePage() {
                         )}
                       </div>
                       
-                      <div className="space-y-10 relative z-10">
+                      <div className="space-y-6 relative z-10">
                         {ads.length > 0 ? (
                           ads.map((ad) => (
                             <div key={ad.id} className="transition-transform duration-500 hover:scale-[1.02]">

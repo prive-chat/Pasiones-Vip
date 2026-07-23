@@ -68,7 +68,7 @@ export default function UserIdentityBar() {
         <div className="absolute inset-0 z-0 bg-zinc-950/50 backdrop-blur-md" />
       )}
 
-      <div className="relative z-10 container mx-auto max-w-6xl px-4 py-6 md:py-16 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+      <div className="relative z-10 container mx-auto max-w-6xl px-4 py-5 md:py-10 flex flex-col sm:flex-row sm:items-center justify-between gap-5 md:gap-6">
         <div className="flex flex-col sm:flex-row sm:items-center gap-6 min-w-0">
           <div className="flex flex-col gap-3 min-w-0">
             <Link to={`/profile/${profile.id}`} className="flex items-center space-x-4 group shrink-0">

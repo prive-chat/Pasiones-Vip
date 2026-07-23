@@ -20,8 +20,8 @@ export function HomeActionArea({
   className 
 }: HomeActionAreaProps) {
   return (
-    <div className={cn("mb-12", className)}>
-      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+    <div className={cn("mb-6 md:mb-8", className)}>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         {/* Left Slot: Primarily for status, greetings or context (modular) */}
         <div className="flex flex-col items-start gap-4 empty:hidden min-w-0">
           {leftContent}

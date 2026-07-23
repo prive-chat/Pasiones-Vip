@@ -366,7 +366,7 @@ export default function UserProfilePage() {
       </div>
       
       <div className="container mx-auto max-w-5xl px-4">
-        <div className="relative -mt-24 mb-8 flex flex-col items-center md:flex-row md:items-end md:space-x-6">
+        <div className="relative -mt-20 md:-mt-24 mb-6 md:mb-8 flex flex-col items-center md:flex-row md:items-end md:space-x-6">
           {/* Avatar */}
           <div className="relative">
             <div className="h-40 w-40 rounded-full border-4 border-black/20 bg-white/10 shadow-2xl overflow-hidden backdrop-blur-md">

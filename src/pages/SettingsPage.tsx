@@ -623,13 +623,13 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-12">
-      <div className="mb-8">
+    <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold text-white">Configuración</h1>
         <p className="text-white/60">Administra tu perfil y preferencias de cuenta.</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 md:gap-8 md:grid-cols-3">
         {/* Sidebar Info */}
         <div className="space-y-6">
           <Card className="overflow-hidden glass-card border-none">

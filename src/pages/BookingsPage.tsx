@@ -235,9 +235,9 @@ export default function BookingsPage() {
   };
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8 md:py-12 pb-32">
+    <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8 pb-32">
       {/* Header Banner */}
-      <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
         <div className="text-center md:text-left">
           <h1 className="text-3xl md:text-4xl font-black italic tracking-wider uppercase text-white font-display flex items-center justify-center md:justify-start gap-3">
             <Calendar className="text-passion-red animate-pulse" size={32} />

@@ -450,8 +450,8 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
             </div>
           )}
         </div>
-        <CardContent className="p-6">
-          <div className="mb-4 flex items-center justify-between">
+        <CardContent className="p-5 md:p-6">
+          <div className="mb-3 md:mb-4 flex items-center justify-between">
             <Link to={`/profile/${item.user_id}`} className="flex items-center space-x-3 group/user">
               <div className="h-10 w-10 rounded-full bg-primary-600/10 flex items-center justify-center text-primary-400 font-black text-sm overflow-hidden ring-2 ring-white/5 transition-all group-hover/user:ring-primary-600/50 group-hover/user:scale-110 shadow-lg">
                 {item.profiles?.avatar_url ? (

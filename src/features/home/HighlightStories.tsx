@@ -37,13 +37,13 @@ export function HighlightStories() {
   );
 
   return (
-    <div className="relative mb-12 group">
-      <div className="flex items-center gap-3 mb-6 px-4">
+    <div className="relative mb-6 md:mb-8 group">
+      <div className="flex items-center gap-3 mb-4 px-4">
         <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Historias VIP</h3>
         <div className="h-px flex-1 bg-white/5" />
       </div>
 
-      <div className="flex gap-6 overflow-x-auto pb-4 px-4 no-scrollbar scroll-smooth">
+      <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-3 px-4 no-scrollbar scroll-smooth">
         {/* Story Upload Trigger */}
         <button 
           onClick={() => currentUser?.is_verified ? setActiveModal('story_upload') : window.location.href = '/auth'}
