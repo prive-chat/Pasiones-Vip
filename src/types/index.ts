@@ -39,6 +39,7 @@ export interface MediaItem {
   created_at: string;
   profiles?: UserProfile;
   likes_count?: number;
+  comments_count?: number;
   is_liked?: boolean;
   reaction_type?: string | null;
 }

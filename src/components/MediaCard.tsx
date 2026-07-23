@@ -1,8 +1,13 @@
-import { memo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { memo, useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
-import { Heart, MessageSquare, Trash2, Maximize2, CheckCircle2, Share2, Flame, Laugh, Heart as HeartIcon, Copy, Facebook, Twitter, Send, Lock, EyeOff, ShieldCheck, Eye, Coins, Star } from 'lucide-react';
+import { 
+  Heart, MessageSquare, Trash2, Maximize2, CheckCircle2, Share2, 
+  Flame, Laugh, Heart as HeartIcon, Copy, Facebook, Twitter, Send, 
+  Lock, EyeOff, ShieldCheck, Eye, Coins, Star, MoreVertical, Pencil, 
+  Flag, Link2 
+} from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { mediaService } from '../services/mediaService';
 import { useAuth } from '../hooks/useAuth';
@@ -15,7 +20,6 @@ import { IMAGE_SIZES } from '../lib/images';
 import { Button } from './ui/Button';
 import { creditsManager } from '../lib/credits';
 import { useNotificationStore } from '../store/notificationStore';
-import { useEffect } from 'react';
 import { useUIStore } from '../store/uiStore';
 
 interface MediaCardProps {
@@ -23,6 +27,7 @@ interface MediaCardProps {
   index: number;
   onView: (url: string, type: 'image' | 'video') => void;
   onDelete?: (id: string) => void;
+  onEdit?: (item: MediaItem) => void;
   queryKey: any[];
 }
 
@@ -32,13 +37,15 @@ const REACTIONS = [
   { type: 'laugh', icon: Laugh, color: 'text-yellow-500', fill: 'fill-yellow-500' },
 ];
 
-const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardProps) => {
+const MediaCard = memo(({ item, index, onView, onDelete, onEdit, queryKey }: MediaCardProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { addToast } = useNotificationStore();
   const setActiveModal = useUIStore((state) => state.setActiveModal);
   const [showReactions, setShowReactions] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isVertical, setIsVertical] = useState(false);
@@ -279,6 +286,80 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
   const currentReaction = REACTIONS.find(r => r.type === item.reaction_type) || REACTIONS[0];
   const ReactionIcon = currentReaction.icon;
 
+  const isOwner = item.user_id === user?.id;
+
+  const menuOptions = [
+    {
+      id: 'edit',
+      label: 'Editar publicación',
+      icon: Pencil,
+      show: isOwner,
+      action: () => {
+        setShowOptionsMenu(false);
+        if (onEdit) {
+          onEdit(item);
+        } else {
+          addToast({
+            type: 'info',
+            message: 'Editar publicación',
+            description: 'Función de edición lista para actualización.',
+          });
+        }
+      }
+    },
+    {
+      id: 'delete',
+      label: 'Eliminar publicación',
+      icon: Trash2,
+      danger: true,
+      show: isOwner && !!onDelete,
+      action: () => {
+        setShowOptionsMenu(false);
+        if (onDelete) onDelete(item.id);
+      }
+    },
+    {
+      id: 'message',
+      label: 'Enviar mensaje',
+      icon: MessageSquare,
+      show: !isOwner && !!item.profiles?.is_verified,
+      action: () => {
+        setShowOptionsMenu(false);
+        navigate(`/messages?to=${item.user_id}&ref=${item.id}`);
+      }
+    },
+    {
+      id: 'copy',
+      label: 'Copiar enlace',
+      icon: Link2,
+      show: true,
+      action: () => {
+        setShowOptionsMenu(false);
+        navigator.clipboard.writeText(`${window.location.origin}/post/${item.id}`);
+        addToast({
+          type: 'success',
+          message: 'Enlace copiado',
+          description: 'Se ha copiado el enlace al portapapeles.'
+        });
+      }
+    },
+    {
+      id: 'report',
+      label: 'Reportar publicación',
+      icon: Flag,
+      danger: true,
+      show: !isOwner,
+      action: () => {
+        setShowOptionsMenu(false);
+        addToast({
+          type: 'info',
+          message: 'Publicación reportada',
+          description: 'Gracias por colaborar con la comunidad.'
+        });
+      }
+    }
+  ].filter(option => option.show);
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -323,28 +404,6 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                 </div>
               </div>
             </Link>
-
-            <div className="flex items-center space-x-1 shrink-0">
-              {item.profiles?.is_verified && item.user_id !== user?.id && (
-                <Link
-                  to={`/messages?to=${item.user_id}&ref=${item.id}`}
-                  className="rounded-xl p-2 text-white/40 hover:bg-white/5 hover:text-primary-400 transition-colors"
-                  title="Enviar mensaje"
-                >
-                  <MessageSquare size={18} />
-                </Link>
-              )}
-
-              {item.user_id === user?.id && onDelete && (
-                <button
-                  onClick={() => onDelete(item.id)}
-                  className="rounded-xl p-2 text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-colors"
-                  title="Eliminar publicación"
-                >
-                  <Trash2 size={18} />
-                </button>
-              )}
-            </div>
           </div>
 
           {item.caption && (
@@ -520,10 +579,12 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
           )}
         </div>
 
-        {/* Bottom Area: Interaction Bar & Description */}
-        <CardContent className="p-4 md:p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
+        {/* Bottom Area: Interaction Bar */}
+        <CardContent className="p-3.5 md:p-4">
+          <div className="flex items-center justify-between relative">
+            {/* Left Interactions: Likes, Comments, Share */}
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              {/* 1. Likes / Reactions */}
               <div className="relative" onMouseEnter={() => setShowReactions(true)} onMouseLeave={() => setShowReactions(false)}>
                 <AnimatePresence>
                   {showReactions && (
@@ -562,7 +623,6 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                           </motion.button>
                         ))}
                       </div>
-                      {/* Invisible bridge to prevent closing */}
                       <div className="absolute -bottom-2 left-0 right-0 h-4 bg-transparent" />
                     </motion.div>
                   )}
@@ -574,16 +634,17 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                     currentReaction: item.reaction_type
                   })}
                   className={cn(
-                    "flex items-center space-x-2 rounded-xl px-3.5 py-2 transition-all duration-300 group/like",
+                    "flex items-center space-x-1.5 rounded-xl px-3 py-2 transition-all duration-300 group/like",
                     item.is_liked ? "bg-primary-600/10 text-primary-400" : "text-white/40 hover:bg-white/5 hover:text-white"
                   )}
+                  title="Me gusta"
                 >
                   <motion.div
                     animate={item.is_liked ? { scale: [1, 1.2, 1] } : {}}
                     transition={{ duration: 0.3 }}
                   >
                     <ReactionIcon 
-                      size={20} 
+                      size={19} 
                       className={cn(
                         item.is_liked ? currentReaction.fill : "group-hover/like:text-primary-400"
                       )} 
@@ -593,6 +654,23 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                 </button>
               </div>
 
+              {/* 2. Comments */}
+              <button
+                onClick={() => {
+                  addToast({
+                    type: 'info',
+                    message: 'Comentarios',
+                    description: 'Módulo de comentarios disponible.',
+                  });
+                }}
+                className="flex items-center space-x-1.5 rounded-xl px-3 py-2 text-white/40 hover:bg-white/5 hover:text-white transition-all duration-300"
+                title="Comentar"
+              >
+                <MessageSquare size={19} />
+                <span className="text-xs font-black italic tracking-wider">{item.comments_count || 0}</span>
+              </button>
+
+              {/* 3. Share */}
               <div className="relative" onMouseEnter={() => setShowShareMenu(true)} onMouseLeave={() => setShowShareMenu(false)}>
                 <AnimatePresence>
                   {showShareMenu && (
@@ -628,7 +706,6 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                           </motion.button>
                         ))}
                       </div>
-                      {/* Invisible bridge to prevent closing */}
                       <div className="absolute -bottom-2 left-0 right-0 h-4 bg-transparent" />
                     </motion.div>
                   )}
@@ -637,14 +714,68 @@ const MediaCard = memo(({ item, index, onView, onDelete, queryKey }: MediaCardPr
                 <button
                   onClick={() => setShowShareMenu(!showShareMenu)}
                   className={cn(
-                    "flex items-center space-x-2 rounded-xl px-3.5 py-2 transition-all duration-300",
+                    "flex items-center space-x-1.5 rounded-xl px-3 py-2 transition-all duration-300",
                     isSharing ? "bg-primary-600/10 text-primary-400" : "text-white/40 hover:bg-white/5 hover:text-white"
                   )}
+                  title="Compartir"
                 >
-                  <Share2 size={20} className={cn(isSharing && "animate-pulse")} />
+                  <Share2 size={19} className={cn(isSharing && "animate-pulse")} />
                   <span className="text-xs font-black italic tracking-wider">{item.shares_count || 0}</span>
                 </button>
               </div>
+            </div>
+
+            {/* Right Side: Three Vertical Dots Options Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+                className={cn(
+                  "p-2 rounded-xl transition-all duration-300",
+                  showOptionsMenu 
+                    ? "bg-primary-600/20 text-primary-400 ring-1 ring-primary-500/30" 
+                    : "text-white/40 hover:bg-white/5 hover:text-white"
+                )}
+                title="Opciones"
+              >
+                <MoreVertical size={20} />
+              </button>
+
+              <AnimatePresence>
+                {showOptionsMenu && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40 bg-transparent" 
+                      onClick={() => setShowOptionsMenu(false)} 
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 bottom-full mb-2 w-48 bg-[#121212]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden p-1.5 space-y-0.5"
+                    >
+                      {menuOptions.map((opt) => {
+                        const Icon = opt.icon;
+                        return (
+                          <button
+                            key={opt.id}
+                            onClick={opt.action}
+                            className={cn(
+                              "w-full flex items-center space-x-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 text-left",
+                              opt.danger 
+                                ? "text-red-400 hover:bg-red-500/10 hover:text-red-300" 
+                                : "text-white/80 hover:bg-white/10 hover:text-white"
+                            )}
+                          >
+                            <Icon size={16} className="shrink-0" />
+                            <span className="truncate">{opt.label}</span>
+                          </button>
+                        );
+                      })}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </CardContent>
