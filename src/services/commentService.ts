@@ -145,21 +145,92 @@ export const commentService = {
         });
       }
 
-      if (data) return data as CommentItem;
+      if (data) {
+        window.dispatchEvent(new CustomEvent('pasiones_comment_added', { detail: { mediaId, comment: data } }));
+        return data as CommentItem;
+      }
     } catch (e) {
       console.warn('Supabase comment insert warning, saved locally:', e);
     }
 
+    window.dispatchEvent(new CustomEvent('pasiones_comment_added', { detail: { mediaId, comment: localComment } }));
     return localComment;
   },
 
-  async deleteComment(commentId: string): Promise<void> {
+  async deleteComment(commentId: string, mediaId?: string): Promise<void> {
     deleteLocalComment(commentId);
+    if (mediaId) {
+      window.dispatchEvent(new CustomEvent('pasiones_comment_deleted', { detail: { mediaId, commentId } }));
+    }
     try {
       await supabase.from('media_comments').delete().eq('id', commentId);
       await supabase.from('comments').delete().eq('id', commentId);
     } catch (e) {
       console.warn('Error deleting comment remotely:', e);
     }
+  },
+
+  subscribeToComments(
+    mediaId: string,
+    onCommentChange: (payload: { eventType: 'INSERT' | 'DELETE'; comment: Partial<CommentItem> }) => void
+  ) {
+    const channelName = `comments_rt_${mediaId}_${Math.random().toString(36).substring(2, 6)}`;
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'media_comments',
+          filter: `media_id=eq.${mediaId}`
+        },
+        async (payload) => {
+          if (payload.new && payload.new.id) {
+            const { data } = await supabase
+              .from('media_comments')
+              .select('*, profiles(*)')
+              .eq('id', payload.new.id)
+              .single();
+
+            if (data) {
+              onCommentChange({ eventType: 'INSERT', comment: data as CommentItem });
+            } else {
+              onCommentChange({
+                eventType: 'INSERT',
+                comment: {
+                  id: payload.new.id,
+                  media_id: mediaId,
+                  user_id: payload.new.user_id,
+                  content: payload.new.content,
+                  created_at: payload.new.created_at || new Date().toISOString()
+                }
+              });
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'media_comments',
+          filter: `media_id=eq.${mediaId}`
+        },
+        (payload) => {
+          if (payload.old && payload.old.id) {
+            onCommentChange({
+              eventType: 'DELETE',
+              comment: { id: payload.old.id, media_id: mediaId }
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }
 };

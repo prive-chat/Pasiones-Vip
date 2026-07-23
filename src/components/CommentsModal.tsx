@@ -38,6 +38,57 @@ export const CommentsModal = ({
   useEffect(() => {
     if (isOpen && mediaId) {
       loadComments();
+
+      // Realtime Supabase subscription
+      const unsubscribe = commentService.subscribeToComments(mediaId, ({ eventType, comment }) => {
+        if (eventType === 'INSERT' && comment && comment.id) {
+          setComments(prev => {
+            if (prev.some(c => c.id === comment.id)) return prev;
+            const updated = [...prev, comment as CommentItem];
+            if (onCommentCountChange) onCommentCountChange(updated.length);
+            return updated;
+          });
+        } else if (eventType === 'DELETE' && comment && comment.id) {
+          setComments(prev => {
+            const updated = prev.filter(c => c.id !== comment.id);
+            if (onCommentCountChange) onCommentCountChange(updated.length);
+            return updated;
+          });
+        }
+      });
+
+      // Window custom events for instant local multi-component sync
+      const handleCustomAdd = (e: Event) => {
+        const detail = (e as CustomEvent).detail;
+        if (detail && detail.mediaId === mediaId && detail.comment) {
+          setComments(prev => {
+            if (prev.some(c => c.id === detail.comment.id)) return prev;
+            const updated = [...prev, detail.comment];
+            if (onCommentCountChange) onCommentCountChange(updated.length);
+            return updated;
+          });
+        }
+      };
+
+      const handleCustomDelete = (e: Event) => {
+        const detail = (e as CustomEvent).detail;
+        if (detail && detail.mediaId === mediaId && detail.commentId) {
+          setComments(prev => {
+            const updated = prev.filter(c => c.id !== detail.commentId);
+            if (onCommentCountChange) onCommentCountChange(updated.length);
+            return updated;
+          });
+        }
+      };
+
+      window.addEventListener('pasiones_comment_added', handleCustomAdd);
+      window.addEventListener('pasiones_comment_deleted', handleCustomDelete);
+
+      return () => {
+        unsubscribe();
+        window.removeEventListener('pasiones_comment_added', handleCustomAdd);
+        window.removeEventListener('pasiones_comment_deleted', handleCustomDelete);
+      };
     }
   }, [isOpen, mediaId]);
 
@@ -113,7 +164,7 @@ export const CommentsModal = ({
   const handleDeleteComment = async (commentId: string) => {
     setDeletingId(commentId);
     try {
-      await commentService.deleteComment(commentId);
+      await commentService.deleteComment(commentId, mediaId);
       setComments(prev => {
         const next = prev.filter(c => c.id !== commentId);
         if (onCommentCountChange) {

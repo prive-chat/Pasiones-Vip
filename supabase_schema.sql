@@ -103,6 +103,23 @@ CREATE TABLE IF NOT EXISTS public.likes (
   UNIQUE(user_id, media_id)
 );
 
+-- F2. COMENTARIOS EN MEDIOS (MEDIA_COMMENTS & COMMENTS)
+CREATE TABLE IF NOT EXISTS public.media_comments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  media_id UUID REFERENCES public.media(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.comments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  media_id UUID REFERENCES public.media(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
 -- G. SEGUIDORES (FOLLOWS)
 CREATE TABLE IF NOT EXISTS public.follows (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -241,6 +258,8 @@ ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.media_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.follows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_chats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
@@ -325,6 +344,25 @@ CREATE POLICY "Likes visibles por todos" ON public.likes FOR SELECT USING (auth.
 
 DROP POLICY IF EXISTS "Usuarios gestionan sus likes" ON public.likes;
 CREATE POLICY "Usuarios gestionan sus likes" ON public.likes FOR ALL USING (auth.uid() = user_id);
+
+-- MEDIA_COMMENTS & COMMENTS
+DROP POLICY IF EXISTS "Comentarios visibles por todos" ON public.media_comments;
+CREATE POLICY "Comentarios visibles por todos" ON public.media_comments FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Usuarios comentan" ON public.media_comments;
+CREATE POLICY "Usuarios comentan" ON public.media_comments FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Eliminar propio comentario o admin" ON public.media_comments;
+CREATE POLICY "Eliminar propio comentario o admin" ON public.media_comments FOR DELETE USING (auth.uid() = user_id OR public.is_super_admin());
+
+DROP POLICY IF EXISTS "Comentarios legacy visibles por todos" ON public.comments;
+CREATE POLICY "Comentarios legacy visibles por todos" ON public.comments FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Usuarios comentan legacy" ON public.comments;
+CREATE POLICY "Usuarios comentan legacy" ON public.comments FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Eliminar propio comentario o admin legacy" ON public.comments;
+CREATE POLICY "Eliminar propio comentario o admin legacy" ON public.comments FOR DELETE USING (auth.uid() = user_id OR public.is_super_admin());
 
 -- FOLLOWS
 DROP POLICY IF EXISTS "Follows visibles por involucrados" ON public.follows;
@@ -764,7 +802,7 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
         CREATE PUBLICATION supabase_realtime;
     END IF;
-    ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications, public.messages, public.profiles, public.media, public.stories;
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications, public.messages, public.profiles, public.media, public.stories, public.media_comments, public.comments;
 EXCEPTION WHEN others THEN NULL;
 END $$;
 
