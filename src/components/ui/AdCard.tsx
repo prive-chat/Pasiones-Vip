@@ -199,15 +199,15 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         className={cn(
-          "relative group overflow-hidden rounded-3xl bg-[#0A0A0A] border border-white/5 transition-all duration-500",
-          "cursor-pointer hover:border-primary-600/50 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)]"
+          "relative group overflow-hidden rounded-2xl bg-[#0E0E10] border border-white/10 transition-all duration-300",
+          "cursor-pointer hover:border-primary-500/40 shadow-xl"
         )}
         onClick={handleCardClick}
       >
         {/* Ad Badge */}
-        <div className="absolute top-4 left-4 z-30 flex items-center gap-2 px-4 py-2 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 shadow-xl">
-          <Megaphone size={12} className="text-primary-500 fill-primary-500/20" />
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Patrocinado</span>
+        <div className="absolute top-3 left-3 z-30 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/70 backdrop-blur-md border border-white/15 shadow-lg">
+          <Megaphone size={11} className="text-primary-500 fill-primary-500/20" />
+          <span className="text-[10px] font-bold uppercase tracking-wider text-white/90">Patrocinado</span>
         </div>
 
         {/* Image/Video Container */}
@@ -268,20 +268,21 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
         </div>
 
         {/* Content */}
-        <div className="p-8">
-          <div className="mb-6 flex items-center justify-between">
-            <div className="flex flex-col">
-              <h4 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-none group-hover:text-primary-400 transition-colors">
-                {ad.title}
-              </h4>
-              {ad.description && (
-                <p className="text-sm text-white/50 mt-3 line-clamp-2 leading-relaxed font-medium">
-                  {ad.description}
-                </p>
-              )}
-            </div>
+        <div className="p-4 sm:p-5 flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <h4 className="text-base sm:text-lg font-bold text-white tracking-tight leading-snug group-hover:text-primary-400 transition-colors">
+              {ad.title}
+            </h4>
+            {ad.description && (
+              <p className="text-xs sm:text-sm text-white/60 line-clamp-2 leading-relaxed font-normal">
+                {ad.description}
+              </p>
+            )}
+          </div>
 
-            <div className="flex items-center space-x-2">
+          {/* Action Row */}
+          <div className="flex items-center justify-between pt-3 border-t border-white/10 gap-2">
+            <div className="flex items-center space-x-1 sm:space-x-2">
               <div className="relative" onMouseEnter={() => setShowReactions(true)} onMouseLeave={() => setShowReactions(false)}>
                 <AnimatePresence>
                   {showReactions && (
@@ -308,7 +309,7 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
                             )}
                           >
                             <reaction.icon 
-                              size={20} 
+                              size={18} 
                               className={cn(
                                 reaction.color,
                                 ad.reaction_type === reaction.type && reaction.fill
@@ -331,8 +332,8 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
                     });
                   }}
                   className={cn(
-                    "flex items-center space-x-2 rounded-xl px-4 py-2 transition-all duration-300 group/like",
-                    ad.is_liked ? "bg-primary-600/10 text-primary-400" : "text-white/40 hover:bg-white/5 hover:text-white"
+                    "flex items-center space-x-1.5 rounded-xl px-2.5 py-1.5 transition-all duration-200 group/like",
+                    ad.is_liked ? "bg-primary-600/10 text-primary-400" : "text-white/50 hover:bg-white/5 hover:text-white"
                   )}
                 >
                   <motion.div
@@ -340,13 +341,13 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
                     transition={{ duration: 0.3 }}
                   >
                     <ReactionIcon 
-                      size={20} 
+                      size={18} 
                       className={cn(
                         ad.is_liked ? currentReaction.fill : "group-hover/like:text-primary-400"
                       )} 
                     />
                   </motion.div>
-                  <span className="text-xs font-black italic tracking-wider">{ad.likes_count || 0}</span>
+                  <span className="text-xs font-bold">{ad.likes_count || 0}</span>
                 </button>
               </div>
 
@@ -377,7 +378,7 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
                             )}
                           >
                             <div className={cn("p-2 rounded-lg text-white", action.color)}>
-                              {action.name === 'Copiar' && isCopied ? <CheckCircle2 size={18} /> : <action.icon size={18} />}
+                              {action.name === 'Copiar' && isCopied ? <CheckCircle2 size={16} /> : <action.icon size={16} />}
                             </div>
                             <span className="text-[10px] font-bold text-white/60 uppercase tracking-tighter">
                               {action.name === 'Copiar' && isCopied ? 'Listo' : action.name}
@@ -397,45 +398,27 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
                     setShowShareMenu(!showShareMenu);
                   }}
                   className={cn(
-                    "flex items-center space-x-2 rounded-xl px-4 py-2 transition-all duration-300",
-                    isSharing ? "bg-primary-600/10 text-primary-400" : "text-white/40 hover:bg-white/5 hover:text-white"
+                    "flex items-center space-x-1.5 rounded-xl px-2.5 py-1.5 transition-all duration-200",
+                    isSharing ? "bg-primary-600/10 text-primary-400" : "text-white/50 hover:bg-white/5 hover:text-white"
                   )}
                 >
-                  <Share2 size={20} className={cn(isSharing && "animate-pulse")} />
-                  <span className="text-xs font-black italic tracking-wider">{ad.shares_count || 0}</span>
+                  <Share2 size={18} className={cn(isSharing && "animate-pulse")} />
+                  <span className="text-xs font-bold">{ad.shares_count || 0}</span>
                 </button>
               </div>
             </div>
-          </div>
-          
-          <div className="flex flex-col gap-6">
+
             {hasLink && (
               <Button
                 onClick={handleLinkClick}
                 variant="primary"
-                className="w-full font-black uppercase tracking-[0.2em] italic h-14 rounded-2xl shadow-[0_10px_20px_-5px_rgba(230,0,0,0.3)] hover:shadow-[0_20px_40px_-10px_rgba(230,0,0,0.5)] transition-all group/btn"
+                size="sm"
+                className="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider rounded-xl shadow-md hover:shadow-primary-500/30 transition-all group/btn shrink-0"
               >
-                {ad.cta_text || 'Saber más'}
-                <ExternalLink size={18} className="ml-3 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
+                <span>{ad.cta_text || 'Saber más'}</span>
+                <ExternalLink size={13} className="ml-1.5 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
               </Button>
             )}
-          </div>
-          
-          <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-primary-600 animate-pulse" />
-              <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">
-                Platinum Partner
-              </span>
-            </div>
-            <div className="flex gap-1.5">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className={cn(
-                  "h-1 w-5 rounded-full bg-white/5 transition-all duration-500 group-hover:bg-primary-600/40",
-                  i === 1 && "group-hover:w-8 group-hover:bg-primary-600"
-                )} />
-              ))}
-            </div>
           </div>
         </div>
       </motion.div>
@@ -493,18 +476,18 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
 
               {/* Text Container */}
               <div className="w-full lg:w-2/5 space-y-10 flex flex-col items-center lg:items-start text-center lg:text-left">
-                <div className="space-y-6">
-                  <div className="flex items-center justify-center lg:justify-start gap-4 text-primary-400">
-                    <div className="p-3 rounded-2xl bg-primary-600/10 backdrop-blur-xl border border-primary-600/20">
-                      <Megaphone size={28} />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center lg:justify-start gap-2.5 text-primary-400">
+                    <div className="p-2 rounded-xl bg-primary-600/10 backdrop-blur-xl border border-primary-600/20">
+                      <Megaphone size={20} />
                     </div>
-                    <span className="text-sm font-black uppercase tracking-[0.4em]">Destacado</span>
+                    <span className="text-xs font-bold uppercase tracking-widest">Anuncio Destacado</span>
                   </div>
-                  <h2 className="text-5xl lg:text-8xl font-black text-white italic uppercase tracking-tighter leading-[0.8]">
+                  <h2 className="text-2xl lg:text-4xl font-extrabold text-white tracking-tight leading-snug">
                     {ad.title}
                   </h2>
                   {ad.description && (
-                    <p className="text-xl lg:text-2xl text-white/40 leading-relaxed max-w-lg font-medium">
+                    <p className="text-sm lg:text-base text-white/70 leading-relaxed max-w-lg font-normal">
                       {ad.description}
                     </p>
                   )}
@@ -515,10 +498,10 @@ export const AdCard = memo(({ ad, queryKey = ['active-ads', 'feed'] }: AdCardPro
                     onClick={handleLinkClick}
                     variant="primary"
                     size="lg"
-                    className="w-full sm:w-auto px-16 h-24 text-3xl font-black uppercase tracking-widest italic shadow-[0_0_60px_rgba(230,0,0,0.4)] transition-all hover:scale-105 hover:shadow-[0_0_80px_rgba(230,0,0,0.6)] rounded-[2rem]"
+                    className="w-full sm:w-auto px-8 h-14 text-base font-bold uppercase tracking-wider shadow-lg hover:shadow-primary-500/40 transition-all rounded-2xl"
                   >
                     {ad.cta_text || 'Saber más'}
-                    <ExternalLink size={32} className="ml-4" />
+                    <ExternalLink size={20} className="ml-2.5" />
                   </Button>
                 )}
 
