@@ -310,5 +310,54 @@ export const mediaService = {
       return `${url}?width=${width}&height=${height}&resize=contain`;
     }
     return url;
+  },
+
+  subscribeToMediaUpdates(
+    mediaId: string,
+    onUpdate: (payload: { likes_count?: number; comments_count?: number; views_count?: number; shares_count?: number }) => void
+  ) {
+    const channelName = `media_metadata_${mediaId}_${Math.random().toString(36).substring(2, 6)}`;
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'media',
+          filter: `id=eq.${mediaId}`
+        },
+        (payload) => {
+          if (payload.new) {
+            onUpdate({
+              likes_count: (payload.new as any).likes_count,
+              comments_count: (payload.new as any).comments_count,
+              views_count: (payload.new as any).views_count,
+              shares_count: (payload.new as any).shares_count
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'likes',
+          filter: `media_id=eq.${mediaId}`
+        },
+        async () => {
+          const { count } = await supabase
+            .from('likes')
+            .select('*', { count: 'exact', head: true })
+            .eq('media_id', mediaId);
+          onUpdate({ likes_count: count || 0 });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }
 };
