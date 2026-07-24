@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShieldCheck, Lock, FileText, Cookie, AlertCircle, Sparkles } from 'lucide-react';
+import { ShieldCheck, Lock, FileText, Cookie, AlertCircle, CreditCard } from 'lucide-react';
 import { Logo } from '../ui/Logo';
 
 export default function LegalFooter() {
@@ -73,7 +73,7 @@ export default function LegalFooter() {
               </li>
               <li>
                 <Link to="/legal#payments" className="hover:text-red-400 transition-colors flex items-center space-x-1.5">
-                  <Sparkles className="w-3 h-3 text-zinc-500" />
+                  <CreditCard className="w-3 h-3 text-zinc-500" />
                   <span>Seguridad en Pagos PCI-DSS</span>
                 </Link>
               </li>
