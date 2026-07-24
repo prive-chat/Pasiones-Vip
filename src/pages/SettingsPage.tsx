@@ -133,6 +133,46 @@ export default function SettingsPage() {
     }
   };
 
+  const handleExportUserData = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const [profileRes, mediaRes, commentsRes, likesRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).single(),
+        supabase.from('media').select('*').eq('user_id', user.id),
+        supabase.from('media_comments').select('*').eq('user_id', user.id),
+        supabase.from('likes').select('*').eq('user_id', user.id)
+      ]);
+
+      const exportData = {
+        app: 'Pasiones VIP',
+        export_date: new Date().toISOString(),
+        user_id: user.id,
+        email: user.email,
+        profile: profileRes.data || {},
+        media_posts: mediaRes.data || [],
+        comments: commentsRes.data || [],
+        likes: likesRes.data || []
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pasiones_vip_datos_${user.id.substring(0, 8)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setMessage({ type: 'success', text: 'Tus datos en Pasiones VIP se han descargado correctamente.' });
+    } catch (e: any) {
+      setMessage({ type: 'error', text: 'Error al exportar datos: ' + e.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Automatically detect user's country from server IP geo API for security
   useEffect(() => {
     if (!profile) return;
@@ -1603,6 +1643,44 @@ export default function SettingsPage() {
           </div>
 
           <div className="mt-12 pt-8 border-t border-white/10">
+            <h3 className="text-sm font-bold text-white mb-4 px-1 uppercase tracking-widest flex items-center space-x-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Privacidad, Datos y Cumplimiento RGPD / ARCO</span>
+            </h3>
+            <Card className="border-white/10 bg-zinc-950/60 glass-card mb-8">
+              <CardContent className="p-6 space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-white text-sm">Descargar Mis Datos Personales (Portabilidad RGPD)</h4>
+                    <p className="text-xs text-white/60">Obtén un archivo JSON estructurado con toda tu información de perfil, publicaciones, comentarios y registro de actividad.</p>
+                  </div>
+                  <Button
+                    onClick={handleExportUserData}
+                    variant="outline"
+                    className="border-white/20 text-white hover:bg-white/10 shrink-0"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar Datos
+                  </Button>
+                </div>
+
+                <div className="pt-4 border-t border-white/5 flex flex-wrap gap-2 text-xs">
+                  <Link to="/privacy" className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-zinc-300 hover:text-white transition-colors">
+                    Política de Privacidad
+                  </Link>
+                  <Link to="/terms" className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-zinc-300 hover:text-white transition-colors">
+                    Términos de Servicio
+                  </Link>
+                  <Link to="/cookies" className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-zinc-300 hover:text-white transition-colors">
+                    Política de Cookies
+                  </Link>
+                  <Link to="/dmca" className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-zinc-300 hover:text-white transition-colors">
+                    Aviso DMCA
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+
             <h3 className="text-sm font-bold text-red-500 mb-4 px-1 uppercase tracking-widest">Zona de Peligro</h3>
             <Card className="border-red-900/50 bg-red-950/20 glass-card">
               <CardContent className="p-6">

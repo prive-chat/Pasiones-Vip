@@ -11,42 +11,6 @@ export interface CommentItem {
   profiles?: UserProfile;
 }
 
-const LOCAL_STORAGE_KEY = 'pasiones_local_comments';
-
-function getLocalComments(mediaId: string): CommentItem[] {
-  try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!raw) return [];
-    const all = JSON.parse(raw);
-    return all.filter((c: CommentItem) => c.media_id === mediaId);
-  } catch {
-    return [];
-  }
-}
-
-function saveLocalComment(comment: CommentItem) {
-  try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-    const all = raw ? JSON.parse(raw) : [];
-    all.push(comment);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(all));
-  } catch (e) {
-    console.error('Error saving local comment', e);
-  }
-}
-
-function deleteLocalComment(commentId: string) {
-  try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!raw) return;
-    const all = JSON.parse(raw);
-    const filtered = all.filter((c: CommentItem) => c.id !== commentId);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(filtered));
-  } catch (e) {
-    console.error('Error deleting local comment', e);
-  }
-}
-
 export const commentService = {
   async fetchComments(mediaId: string): Promise<CommentItem[]> {
     try {
@@ -64,24 +28,16 @@ export const commentService = {
           .order('created_at', { ascending: true });
 
         if (altError) {
-          return getLocalComments(mediaId);
+          console.error('Error fetching comments from database:', altError);
+          return [];
         }
         return (altData || []) as CommentItem[];
       }
 
-      const remoteComments = (data || []) as CommentItem[];
-      const localComments = getLocalComments(mediaId);
-      
-      const combined = [...remoteComments];
-      localComments.forEach(local => {
-        if (!combined.some(r => r.id === local.id)) {
-          combined.push(local);
-        }
-      });
-
-      return combined.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    } catch {
-      return getLocalComments(mediaId);
+      return (data || []) as CommentItem[];
+    } catch (err) {
+      console.error('Error in fetchComments:', err);
+      return [];
     }
   },
 
@@ -91,43 +47,61 @@ export const commentService = {
     content: string, 
     userProfile?: UserProfile
   ): Promise<CommentItem> {
-    const newCommentId = `comment_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const now = new Date().toISOString();
+    const trimmedContent = content.trim();
 
-    const localComment: CommentItem = {
-      id: newCommentId,
-      media_id: mediaId,
-      user_id: userId,
-      content: content.trim(),
-      created_at: now,
-      profiles: userProfile
-    };
+    let insertedComment: CommentItem | null = null;
 
-    saveLocalComment(localComment);
+    // Try inserting into media_comments
+    const { data, error } = await supabase
+      .from('media_comments')
+      .insert({
+        media_id: mediaId,
+        user_id: userId,
+        content: trimmedContent
+      })
+      .select('*, profiles(*)')
+      .single();
 
-    try {
-      const { data, error } = await supabase
-        .from('media_comments')
+    if (!error && data) {
+      insertedComment = data as CommentItem;
+    } else {
+      // Fallback try to comments table if media_comments table differs
+      const { data: altData, error: altError } = await supabase
+        .from('comments')
         .insert({
-          id: newCommentId,
           media_id: mediaId,
           user_id: userId,
-          content: content.trim()
+          content: trimmedContent
         })
         .select('*, profiles(*)')
         .single();
 
-      if (error) {
-        await supabase
-          .from('comments')
-          .insert({
-            id: newCommentId,
-            media_id: mediaId,
-            user_id: userId,
-            content: content.trim()
-          });
+      if (!altError && altData) {
+        insertedComment = altData as CommentItem;
+      } else {
+        throw new Error(error?.message || altError?.message || 'Error al guardar el comentario en la base de datos.');
       }
+    }
 
+    // Sync comments_count in media table
+    try {
+      const { count } = await supabase
+        .from('media_comments')
+        .select('*', { count: 'exact', head: true })
+        .eq('media_id', mediaId);
+
+      const totalCount = count !== null ? count : 1;
+
+      await supabase
+        .from('media')
+        .update({ comments_count: totalCount })
+        .eq('id', mediaId);
+    } catch (countErr) {
+      console.warn('Could not update comments_count on media:', countErr);
+    }
+
+    // Notify post owner
+    try {
       const { data: media } = await supabase
         .from('media')
         .select('user_id, caption')
@@ -140,33 +114,45 @@ export const commentService = {
           sender_id: userId,
           type: 'comment',
           title: 'Nuevo Comentario',
-          content: `${userProfile?.full_name || 'Alguien'} comentó: "${content.substring(0, 30)}..."`,
+          content: `${userProfile?.full_name || 'Alguien'} comentó: "${trimmedContent.substring(0, 30)}..."`,
           link: `/post/${mediaId}`
         });
       }
-
-      if (data) {
-        window.dispatchEvent(new CustomEvent('pasiones_comment_added', { detail: { mediaId, comment: data } }));
-        return data as CommentItem;
-      }
-    } catch (e) {
-      console.warn('Supabase comment insert warning, saved locally:', e);
+    } catch (notifErr) {
+      console.warn('Could not send notification:', notifErr);
     }
 
-    window.dispatchEvent(new CustomEvent('pasiones_comment_added', { detail: { mediaId, comment: localComment } }));
-    return localComment;
+    // Dispatch custom event for UI components sync
+    window.dispatchEvent(new CustomEvent('pasiones_comment_added', { 
+      detail: { mediaId, comment: insertedComment } 
+    }));
+
+    return insertedComment;
   },
 
   async deleteComment(commentId: string, mediaId?: string): Promise<void> {
-    deleteLocalComment(commentId);
-    if (mediaId) {
-      window.dispatchEvent(new CustomEvent('pasiones_comment_deleted', { detail: { mediaId, commentId } }));
-    }
     try {
       await supabase.from('media_comments').delete().eq('id', commentId);
       await supabase.from('comments').delete().eq('id', commentId);
+
+      if (mediaId) {
+        const { count } = await supabase
+          .from('media_comments')
+          .select('*', { count: 'exact', head: true })
+          .eq('media_id', mediaId);
+
+        await supabase
+          .from('media')
+          .update({ comments_count: count || 0 })
+          .eq('id', mediaId);
+
+        window.dispatchEvent(new CustomEvent('pasiones_comment_deleted', { 
+          detail: { mediaId, commentId } 
+        }));
+      }
     } catch (e) {
-      console.warn('Error deleting comment remotely:', e);
+      console.error('Error deleting comment remotely:', e);
+      throw e;
     }
   },
 
@@ -234,3 +220,4 @@ export const commentService = {
     };
   }
 };
+

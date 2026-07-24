@@ -21,6 +21,14 @@ import AdPage from './pages/AdPage';
 import NotFoundPage from './pages/NotFoundPage';
 import AdminPage from './pages/AdminPage';
 import BookingsPage from './pages/BookingsPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsOfServicePage from './pages/TermsOfServicePage';
+import CookiePolicyPage from './pages/CookiePolicyPage';
+import DMCAPage from './pages/DMCAPage';
+import LegalInfoPage from './pages/LegalInfoPage';
+
+import AgeGateModal from './components/legal/AgeGateModal';
+import CookieConsentBanner from './components/legal/CookieConsentBanner';
 
 import { Logo } from './components/ui/Logo';
 
@@ -55,6 +63,8 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      <AgeGateModal />
+      <CookieConsentBanner />
       <div className="min-h-screen bg-black text-white">
         <ToastContainer />
         <Suspense fallback={<LoadingScreen />}>
@@ -64,11 +74,17 @@ export default function App() {
           <main className="pb-24 md:pb-0">
             <AnimatePresence mode="wait">
               <Routes location={location} key={location.pathname}>
-                {/* Public Routes */}
+                {/* Public & Legal Routes */}
                 <Route path="/auth" element={(!user || isRecovery) ? <AuthPage /> : <Navigate to="/" replace />} />
                 <Route path="/profile/:userId" element={<PageTransition><UserProfilePage /></PageTransition>} />
                 <Route path="/post/:postId" element={<PageTransition><PostPage /></PageTransition>} />
                 <Route path="/ad/:adId" element={<PageTransition><AdPage /></PageTransition>} />
+                
+                <Route path="/privacy" element={<PageTransition><PrivacyPolicyPage /></PageTransition>} />
+                <Route path="/terms" element={<PageTransition><TermsOfServicePage /></PageTransition>} />
+                <Route path="/cookies" element={<PageTransition><CookiePolicyPage /></PageTransition>} />
+                <Route path="/dmca" element={<PageTransition><DMCAPage /></PageTransition>} />
+                <Route path="/legal" element={<PageTransition><LegalInfoPage /></PageTransition>} />
                 
                 {/* Protected Routes */}
                 <Route path="/" element={user ? <PageTransition><HomePage /></PageTransition> : <Navigate to="/auth" replace />} />
