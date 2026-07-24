@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ShieldCheck, Heart, Sparkles, Image, Eye, MessageSquare, Send } from 'lucide-react';
+import { X, ShieldCheck, Heart, Crown, Image, Eye, MessageSquare, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './Button';
 
@@ -26,7 +26,7 @@ export function VipInfoModal({ isOpen, onClose }: VipInfoModalProps) {
       color: 'text-passion-red bg-passion-red/10 border-passion-red/20',
     },
     {
-      icon: Sparkles,
+      icon: Crown,
       title: 'Publicación de Historias VIP',
       description: 'Comparte momentos efímeros diarios (duración de 24 horas) para mantenerte activo e interactuar directamente con tus clientes.',
       color: 'text-amber-400 bg-amber-400/10 border-amber-400/20',
@@ -111,7 +111,7 @@ export function VipInfoModal({ isOpen, onClose }: VipInfoModalProps) {
               {/* Header */}
               <div className="text-center max-w-2xl mx-auto mb-10">
                 <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-[10px] font-black uppercase text-gold-500 bg-gold-600/10 border border-gold-500/20 tracking-widest mb-4">
-                  <Sparkles size={12} className="animate-bounce" />
+                  <Crown size={12} className="animate-bounce text-amber-400" />
                   Membresía Exclusiva
                 </span>
                 <h2 className="text-2xl sm:text-3.5xl font-black text-white uppercase italic tracking-tight font-display mb-3">

@@ -9,11 +9,41 @@ export interface CommentItem {
   content: string;
   created_at: string;
   profiles?: UserProfile;
+  likes_count?: number;
+  is_liked?: boolean;
+}
+
+const LOCAL_LIKES_KEY = 'pasiones_comment_likes';
+
+function getLocalLikedComments(userId?: string): Record<string, boolean> {
+  if (!userId) return {};
+  try {
+    const raw = localStorage.getItem(`${LOCAL_LIKES_KEY}_${userId}`);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function setLocalLikedComment(userId: string, commentId: string, isLiked: boolean) {
+  try {
+    const current = getLocalLikedComments(userId);
+    if (isLiked) {
+      current[commentId] = true;
+    } else {
+      delete current[commentId];
+    }
+    localStorage.setItem(`${LOCAL_LIKES_KEY}_${userId}`, JSON.stringify(current));
+  } catch (e) {
+    console.error('Error saving comment like locally:', e);
+  }
 }
 
 export const commentService = {
-  async fetchComments(mediaId: string): Promise<CommentItem[]> {
+  async fetchComments(mediaId: string, currentUserId?: string): Promise<CommentItem[]> {
     try {
+      let rawComments: CommentItem[] = [];
+
       const { data, error } = await supabase
         .from('media_comments')
         .select('*, profiles(*)')
@@ -31,14 +61,85 @@ export const commentService = {
           console.error('Error fetching comments from database:', altError);
           return [];
         }
-        return (altData || []) as CommentItem[];
+        rawComments = (altData || []) as CommentItem[];
+      } else {
+        rawComments = (data || []) as CommentItem[];
       }
 
-      return (data || []) as CommentItem[];
+      // Populate likes info
+      const localLikedMap = getLocalLikedComments(currentUserId);
+      
+      // Try to fetch remote comment likes if table exists
+      let remoteLikesMap: Record<string, { count: number; userLiked: boolean }> = {};
+      try {
+        const commentIds = rawComments.map(c => c.id);
+        if (commentIds.length > 0) {
+          const { data: likesData } = await supabase
+            .from('comment_likes')
+            .select('comment_id, user_id')
+            .in('comment_id', commentIds);
+
+          if (likesData) {
+            likesData.forEach(l => {
+              if (!remoteLikesMap[l.comment_id]) {
+                remoteLikesMap[l.comment_id] = { count: 0, userLiked: false };
+              }
+              remoteLikesMap[l.comment_id].count += 1;
+              if (currentUserId && l.user_id === currentUserId) {
+                remoteLikesMap[l.comment_id].userLiked = true;
+              }
+            });
+          }
+        }
+      } catch {
+        // Fallback to local storage calculation
+      }
+
+      return rawComments.map(c => {
+        const remote = remoteLikesMap[c.id];
+        const isLikedLocally = !!localLikedMap[c.id];
+        
+        let likesCount = remote ? remote.count : (c.likes_count || 0);
+        let isLiked = remote ? remote.userLiked : isLikedLocally;
+
+        // Ensure local state syncs if user liked locally
+        if (isLikedLocally && (!remote || !remote.userLiked)) {
+          isLiked = true;
+          if (!remote) likesCount += 1;
+        }
+
+        return {
+          ...c,
+          likes_count: likesCount,
+          is_liked: isLiked
+        };
+      });
     } catch (err) {
       console.error('Error in fetchComments:', err);
       return [];
     }
+  },
+
+  async toggleCommentLike(commentId: string, userId: string, currentIsLiked: boolean): Promise<{ isLiked: boolean; newCount: number }> {
+    const nextIsLiked = !currentIsLiked;
+    setLocalLikedComment(userId, commentId, nextIsLiked);
+
+    try {
+      if (nextIsLiked) {
+        await supabase
+          .from('comment_likes')
+          .insert({ comment_id: commentId, user_id: userId });
+      } else {
+        await supabase
+          .from('comment_likes')
+          .delete()
+          .match({ comment_id: commentId, user_id: userId });
+      }
+    } catch (e) {
+      console.warn('Comment like remote sync note:', e);
+    }
+
+    return { isLiked: nextIsLiked, newCount: nextIsLiked ? 1 : -1 };
   },
 
   async addComment(

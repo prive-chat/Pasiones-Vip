@@ -120,6 +120,16 @@ CREATE TABLE IF NOT EXISTS public.comments (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
+-- F3. LIKES EN COMENTARIOS (COMMENT_LIKES)
+CREATE TABLE IF NOT EXISTS public.comment_likes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  comment_id UUID REFERENCES public.media_comments(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  type TEXT DEFAULT 'heart',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  UNIQUE(comment_id, user_id)
+);
+
 -- G. SEGUIDORES (FOLLOWS)
 CREATE TABLE IF NOT EXISTS public.follows (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -260,6 +270,7 @@ ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.media_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.comment_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.follows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_chats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
@@ -363,6 +374,13 @@ CREATE POLICY "Usuarios comentan legacy" ON public.comments FOR INSERT WITH CHEC
 
 DROP POLICY IF EXISTS "Eliminar propio comentario o admin legacy" ON public.comments;
 CREATE POLICY "Eliminar propio comentario o admin legacy" ON public.comments FOR DELETE USING (auth.uid() = user_id OR public.is_super_admin());
+
+-- COMMENT_LIKES
+DROP POLICY IF EXISTS "Likes de comentarios visibles por todos" ON public.comment_likes;
+CREATE POLICY "Likes de comentarios visibles por todos" ON public.comment_likes FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Usuarios gestionan sus likes de comentarios" ON public.comment_likes;
+CREATE POLICY "Usuarios gestionan sus likes de comentarios" ON public.comment_likes FOR ALL USING (auth.uid() = user_id);
 
 -- FOLLOWS
 DROP POLICY IF EXISTS "Follows visibles por involucrados" ON public.follows;

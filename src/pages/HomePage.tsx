@@ -4,7 +4,7 @@ import UserDirectory from '../features/users/UserDirectory';
 import HomeActionArea from '../features/home/HomeActionArea';
 import TrendingSidebar from '../features/feed/TrendingSidebar';
 import { Button } from '../components/ui/Button';
-import { Plus, LayoutGrid, ShieldAlert, Users, Megaphone, Sparkles } from 'lucide-react';
+import { Plus, LayoutGrid, ShieldAlert, Users, Megaphone, Crown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../hooks/useAuth';
 import { useUIStore } from '../store/uiStore';
@@ -121,7 +121,7 @@ export default function HomePage() {
                   {ads.length > 0 && (
                     <div className="lg:hidden">
                       <div className="mb-3 flex items-center gap-2">
-                        <Sparkles size={14} className="text-amber-400" />
+                        <Crown size={14} className="text-amber-400 fill-amber-400/20" />
                         <span className="text-[10px] font-black uppercase text-amber-400 tracking-widest">Recomendación Premium</span>
                       </div>
                       <AdCard ad={ads[0]} />

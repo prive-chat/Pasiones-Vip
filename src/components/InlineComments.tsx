@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, MessageSquare, Trash2, CheckCircle2, Loader2, Sparkles, ChevronUp } from 'lucide-react';
+import { Send, MessageSquare, Trash2, CheckCircle2, Loader2, Heart, ChevronUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '../hooks/useAuth';
@@ -35,6 +35,17 @@ export const InlineComments = ({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const onCommentCountChangeRef = useRef(onCommentCountChange);
+  useEffect(() => {
+    onCommentCountChangeRef.current = onCommentCountChange;
+  }, [onCommentCountChange]);
+
+  useEffect(() => {
+    if (!loading && onCommentCountChangeRef.current) {
+      onCommentCountChangeRef.current(comments.length);
+    }
+  }, [comments.length, loading]);
+
   useEffect(() => {
     if (isOpen && mediaId) {
       loadComments();
@@ -47,15 +58,11 @@ export const InlineComments = ({
         if (eventType === 'INSERT' && comment && comment.id) {
           setComments(prev => {
             if (prev.some(c => c.id === comment.id)) return prev;
-            const updated = [...prev, comment as CommentItem];
-            if (onCommentCountChange) onCommentCountChange(updated.length);
-            return updated;
+            return [...prev, comment as CommentItem];
           });
         } else if (eventType === 'DELETE' && comment && comment.id) {
           setComments(prev => {
-            const updated = prev.filter(c => c.id !== comment.id);
-            if (onCommentCountChange) onCommentCountChange(updated.length);
-            return updated;
+            return prev.filter(c => c.id !== comment.id);
           });
         }
       });
@@ -66,9 +73,7 @@ export const InlineComments = ({
         if (detail && detail.mediaId === mediaId && detail.comment) {
           setComments(prev => {
             if (prev.some(c => c.id === detail.comment.id)) return prev;
-            const updated = [...prev, detail.comment];
-            if (onCommentCountChange) onCommentCountChange(updated.length);
-            return updated;
+            return [...prev, detail.comment];
           });
         }
       };
@@ -77,9 +82,7 @@ export const InlineComments = ({
         const detail = (e as CustomEvent).detail;
         if (detail && detail.mediaId === mediaId && detail.commentId) {
           setComments(prev => {
-            const updated = prev.filter(c => c.id !== detail.commentId);
-            if (onCommentCountChange) onCommentCountChange(updated.length);
-            return updated;
+            return prev.filter(c => c.id !== detail.commentId);
           });
         }
       };
@@ -93,20 +96,45 @@ export const InlineComments = ({
         window.removeEventListener('pasiones_comment_deleted', handleCustomDelete);
       };
     }
-  }, [isOpen, mediaId]);
+  }, [isOpen, mediaId, user?.id]);
 
   const loadComments = async () => {
     setLoading(true);
     try {
-      const data = await commentService.fetchComments(mediaId);
+      const data = await commentService.fetchComments(mediaId, user?.id);
       setComments(data);
-      if (onCommentCountChange) {
-        onCommentCountChange(data.length);
-      }
     } catch (err) {
       console.error('Error loading comments:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleLikeComment = async (commentId: string, currentIsLiked?: boolean) => {
+    if (!user) {
+      addToast({
+        type: 'error',
+        message: 'Inicia sesión',
+        description: 'Debes iniciar sesión para dar me gusta a los comentarios.'
+      });
+      return;
+    }
+
+    setComments(prev =>
+      prev.map(c => {
+        if (c.id === commentId) {
+          const isLiked = !c.is_liked;
+          const likesCount = Math.max(0, (c.likes_count || 0) + (isLiked ? 1 : -1));
+          return { ...c, is_liked: isLiked, likes_count: likesCount };
+        }
+        return c;
+      })
+    );
+
+    try {
+      await commentService.toggleCommentLike(commentId, user.id, !!currentIsLiked);
+    } catch (err) {
+      console.error('Error toggling comment like:', err);
     }
   };
 
@@ -135,13 +163,7 @@ export const InlineComments = ({
         profile || undefined
       );
 
-      setComments(prev => {
-        const next = [...prev, created];
-        if (onCommentCountChange) {
-          onCommentCountChange(next.length);
-        }
-        return next;
-      });
+      setComments(prev => [...prev, created]);
 
       addToast({
         type: 'success',
@@ -164,13 +186,7 @@ export const InlineComments = ({
     setDeletingId(commentId);
     try {
       await commentService.deleteComment(commentId, mediaId);
-      setComments(prev => {
-        const next = prev.filter(c => c.id !== commentId);
-        if (onCommentCountChange) {
-          onCommentCountChange(next.length);
-        }
-        return next;
-      });
+      setComments(prev => prev.filter(c => c.id !== commentId));
       addToast({
         type: 'info',
         message: 'Comentario eliminado',
@@ -287,7 +303,7 @@ export const InlineComments = ({
                 </div>
               ) : comments.length === 0 ? (
                 <div className="py-6 text-center space-y-1 bg-white/[0.01] rounded-xl border border-white/5">
-                  <Sparkles size={20} className="mx-auto text-primary-400/40" />
+                  <MessageSquare size={20} className="mx-auto text-primary-400/40" />
                   <p className="text-xs font-bold text-white/60">Sé el primero en comentar</p>
                   <p className="text-[10px] text-white/40">Comparte tu opinión con la comunidad.</p>
                 </div>
@@ -332,20 +348,42 @@ export const InlineComments = ({
                             </span>
                           </div>
 
-                          {canDelete && (
+                          <div className="flex items-center space-x-1 shrink-0">
+                            {/* Like Comment Button */}
                             <button
-                              onClick={() => handleDeleteComment(comment.id)}
-                              disabled={deletingId === comment.id}
-                              className="text-white/30 hover:text-red-400 p-1 rounded-md hover:bg-red-500/10 transition-colors opacity-0 group-hover/comment:opacity-100 shrink-0"
-                              title="Eliminar"
+                              onClick={() => handleToggleLikeComment(comment.id, comment.is_liked)}
+                              className={`flex items-center space-x-1 px-1.5 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                                comment.is_liked
+                                  ? 'bg-red-500/10 text-red-400'
+                                  : 'text-white/40 hover:text-white hover:bg-white/5'
+                              }`}
+                              title={comment.is_liked ? 'Ya no me gusta' : 'Me gusta'}
                             >
-                              {deletingId === comment.id ? (
-                                <Loader2 size={12} className="animate-spin text-red-400" />
-                              ) : (
-                                <Trash2 size={12} />
-                              )}
+                              <Heart
+                                size={11}
+                                className={comment.is_liked ? 'fill-red-500 text-red-500' : ''}
+                              />
+                              {comment.likes_count ? (
+                                <span>{comment.likes_count}</span>
+                              ) : null}
                             </button>
-                          )}
+
+                            {/* Delete Comment Button */}
+                            {canDelete && (
+                              <button
+                                onClick={() => handleDeleteComment(comment.id)}
+                                disabled={deletingId === comment.id}
+                                className="text-white/40 hover:text-red-400 p-1 rounded-md hover:bg-red-500/10 transition-colors opacity-100 sm:opacity-40 sm:group-hover/comment:opacity-100 shrink-0"
+                                title="Eliminar"
+                              >
+                                {deletingId === comment.id ? (
+                                  <Loader2 size={12} className="animate-spin text-red-400" />
+                                ) : (
+                                  <Trash2 size={12} />
+                                )}
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         <p className="text-xs text-white/85 mt-0.5 leading-normal whitespace-pre-line font-normal break-words">

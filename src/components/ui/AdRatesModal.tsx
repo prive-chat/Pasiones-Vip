@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Megaphone, CheckCircle2, Sparkles, TrendingUp, Send, Trophy, Flame } from 'lucide-react';
+import { X, Megaphone, CheckCircle2, TrendingUp, Send, Trophy, Flame } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './Button';
 
@@ -132,7 +132,7 @@ export function AdRatesModal({ isOpen, onClose }: AdRatesModalProps) {
               {/* Header */}
               <div className="text-center max-w-2xl mx-auto mb-10">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase text-passion-red bg-passion-red/10 border border-passion-red/20 tracking-widest mb-4">
-                  <Sparkles size={12} className="animate-pulse" />
+                  <Megaphone size={12} className="animate-pulse" />
                   Espacio Publicitario de Élite
                 </span>
                 <h2 className="text-2xl sm:text-3.5xl font-black text-white uppercase italic tracking-tight font-display mb-3">

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useUIStore } from '@/src/store/uiStore';
 import { creditsManager } from '@/src/lib/credits';
 import { useNotificationStore } from '@/src/store/notificationStore';
-import { CreditCard, Coins, ShieldCheck, Lock, Sparkles, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { CreditCard, Coins, ShieldCheck, Lock, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const PACKAGES = [
